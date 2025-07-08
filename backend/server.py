@@ -439,6 +439,177 @@ class ForexTradingAgent:
         except Exception as e:
             print(f"Error calculating confidence: {e}")
             return 0.5
+            
+    def generate_signals(self, symbol: str, data: pd.DataFrame):
+        """Generate trading signals using multiple strategies"""
+        if data.empty or len(data) < 50:
+            return []
+            
+        signals = []
+        latest = data.iloc[-1]
+        prev = data.iloc[-2]
+        
+        # Get AI pattern analysis
+        pattern_analysis = self.analyze_market_patterns(symbol, data)
+        
+        try:
+            # Strategy 1: RSI + MACD Confluence
+            if 'RSI' in data.columns and 'MACD' in data.columns and 'MACD_Signal' in data.columns:
+                if (pd.notna(latest['RSI']) and pd.notna(latest['MACD']) and 
+                    pd.notna(latest['MACD_Signal']) and pd.notna(prev['MACD']) and pd.notna(prev['MACD_Signal'])):
+                    
+                    if latest['RSI'] < 30 and latest['MACD'] > latest['MACD_Signal'] and prev['MACD'] <= prev['MACD_Signal']:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'RSI_MACD_Confluence',
+                            'strength': 0.8 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 0.995,
+                            'take_profit': latest['Close'] * 1.015,
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+                    elif latest['RSI'] > 70 and latest['MACD'] < latest['MACD_Signal'] and prev['MACD'] >= prev['MACD_Signal']:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'RSI_MACD_Confluence',
+                            'strength': 0.8 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 1.005,
+                            'take_profit': latest['Close'] * 0.985,
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+            
+            # Strategy 2: Bollinger Bands + RSI
+            if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns and 'RSI' in data.columns:
+                if (pd.notna(latest['BB_Upper']) and pd.notna(latest['BB_Lower']) and 
+                    pd.notna(latest['RSI']) and pd.notna(latest['BB_Middle'])):
+                    
+                    if latest['Close'] <= latest['BB_Lower'] and latest['RSI'] < 30:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'BB_RSI_Oversold',
+                            'strength': 0.75 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['BB_Lower'] * 0.995,
+                            'take_profit': latest['BB_Middle'],
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+                    elif latest['Close'] >= latest['BB_Upper'] and latest['RSI'] > 70:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'BB_RSI_Overbought',
+                            'strength': 0.75 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['BB_Upper'] * 1.005,
+                            'take_profit': latest['BB_Middle'],
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+            
+            # Strategy 3: EMA Crossover + ADX
+            if 'EMA_10' in data.columns and 'EMA_20' in data.columns and 'ADX' in data.columns:
+                if (pd.notna(latest['EMA_10']) and pd.notna(latest['EMA_20']) and 
+                    pd.notna(latest['ADX']) and pd.notna(prev['EMA_10']) and pd.notna(prev['EMA_20'])):
+                    
+                    if (latest['EMA_10'] > latest['EMA_20'] and prev['EMA_10'] <= prev['EMA_20'] and 
+                        latest['ADX'] > 25):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'EMA_Cross_ADX',
+                            'strength': 0.7 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['EMA_20'] * 0.995,
+                            'take_profit': latest['Close'] * 1.02,
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+                    elif (latest['EMA_10'] < latest['EMA_20'] and prev['EMA_10'] >= prev['EMA_20'] and 
+                          latest['ADX'] > 25):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'EMA_Cross_ADX',
+                            'strength': 0.7 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['EMA_20'] * 1.005,
+                            'take_profit': latest['Close'] * 0.98,
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+            
+            # Strategy 4: Stochastic + Williams %R
+            if 'Stoch_K' in data.columns and 'Stoch_D' in data.columns and 'Williams_R' in data.columns:
+                if (pd.notna(latest['Stoch_K']) and pd.notna(latest['Stoch_D']) and 
+                    pd.notna(latest['Williams_R'])):
+                    
+                    if (latest['Stoch_K'] < 20 and latest['Stoch_D'] < 20 and 
+                        latest['Williams_R'] < -80 and latest['Stoch_K'] > latest['Stoch_D']):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'Stoch_Williams_Oversold',
+                            'strength': 0.6 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 0.995,
+                            'take_profit': latest['Close'] * 1.01,
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+                    elif (latest['Stoch_K'] > 80 and latest['Stoch_D'] > 80 and 
+                          latest['Williams_R'] > -20 and latest['Stoch_K'] < latest['Stoch_D']):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'Stoch_Williams_Overbought',
+                            'strength': 0.6 * pattern_analysis.get('confidence', 0.5),
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 1.005,
+                            'take_profit': latest['Close'] * 0.99,
+                            'timestamp': datetime.now(),
+                            'pattern_support': pattern_analysis.get('trend_prediction', {}).get('direction', 'unknown')
+                        })
+            
+            # Strategy 5: AI Pattern-Based Signals
+            if pattern_analysis.get('confidence', 0) > 0.7:
+                trend_prediction = pattern_analysis.get('trend_prediction', {})
+                if trend_prediction.get('direction') == 'bullish' and trend_prediction.get('confidence', 0) > 0.6:
+                    signals.append({
+                        'symbol': symbol,
+                        'type': 'BUY',
+                        'strategy': 'AI_Pattern_Analysis',
+                        'strength': pattern_analysis.get('confidence', 0.5),
+                        'entry_price': latest['Close'],
+                        'stop_loss': latest['Close'] * 0.99,
+                        'take_profit': latest['Close'] * 1.025,
+                        'timestamp': datetime.now(),
+                        'pattern_support': f"AI detected {pattern_analysis.get('short_trend', 'unknown')} trend"
+                    })
+                elif trend_prediction.get('direction') == 'bearish' and trend_prediction.get('confidence', 0) > 0.6:
+                    signals.append({
+                        'symbol': symbol,
+                        'type': 'SELL',
+                        'strategy': 'AI_Pattern_Analysis',
+                        'strength': pattern_analysis.get('confidence', 0.5),
+                        'entry_price': latest['Close'],
+                        'stop_loss': latest['Close'] * 1.01,
+                        'take_profit': latest['Close'] * 0.975,
+                        'timestamp': datetime.now(),
+                        'pattern_support': f"AI detected {pattern_analysis.get('short_trend', 'unknown')} trend"
+                    })
+            
+            return signals
+            
+        except Exception as e:
+            print(f"Error generating signals for {symbol}: {e}")
+            return []
     
     def generate_binary_signals(self, symbol: str, data: pd.DataFrame):
         """Generate high-frequency binary trading signals"""
