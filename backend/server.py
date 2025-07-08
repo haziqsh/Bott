@@ -159,6 +159,51 @@ class ForexTradingAgent:
             return data
     
     def analyze_market_patterns(self, symbol: str, data: pd.DataFrame):
+        """Advanced AI-powered pattern recognition and trend analysis"""
+        try:
+            if data.empty or len(data) < 100:
+                return {'pattern': 'insufficient_data', 'confidence': 0.0, 'trend': 'unknown'}
+            
+            # Technical pattern detection
+            latest_20 = data.tail(20)
+            
+            # Trend analysis using multiple timeframes
+            short_trend = self.detect_trend(data.tail(20))
+            medium_trend = self.detect_trend(data.tail(50))
+            long_trend = self.detect_trend(data.tail(100))
+            
+            # Pattern detection using price action
+            patterns = self.detect_chart_patterns(data.tail(50))
+            
+            # Volume analysis (if available)
+            volume_pattern = self.analyze_volume_pattern(data.tail(20))
+            
+            # Volatility analysis
+            volatility_state = self.analyze_volatility(data.tail(20))
+            
+            # Market regime detection
+            market_regime = self.detect_market_regime(data.tail(100))
+            
+            # AI-powered trend prediction
+            trend_prediction = self.predict_trend_direction(data.tail(200))
+            
+            return {
+                'symbol': symbol,
+                'short_trend': short_trend,
+                'medium_trend': medium_trend,
+                'long_trend': long_trend,
+                'patterns': patterns,
+                'volume_pattern': volume_pattern,
+                'volatility_state': volatility_state,
+                'market_regime': market_regime,
+                'trend_prediction': trend_prediction,
+                'confidence': self.calculate_pattern_confidence(short_trend, medium_trend, long_trend, patterns),
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            print(f"Error analyzing patterns for {symbol}: {e}")
+            return {'pattern': 'error', 'confidence': 0.0, 'trend': 'unknown'}
         """Generate trading signals using multiple strategies"""
         if data.empty or len(data) < 50:
             return []
