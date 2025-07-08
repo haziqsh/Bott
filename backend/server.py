@@ -679,38 +679,106 @@ class ForexTradingAgent:
             return []
     
     def analyze_sentiment(self, symbol: str):
-        """Analyze market sentiment for a currency pair"""
+        """Analyze market sentiment for a currency pair using AI models"""
         try:
             if sentiment_analyzer is None:
-                return {'sentiment': 'neutral', 'confidence': 0.5}
+                return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
             
-            # Simulate news sentiment analysis
-            # In a real implementation, you would fetch news related to the currency pair
+            # Generate relevant news headlines for analysis
+            # In a real implementation, you would fetch actual news from APIs
+            base_currency = symbol[:3]
+            quote_currency = symbol[3:]
+            
             sample_news = [
-                f"Economic indicators show positive outlook for {symbol[:3]}",
-                f"Central bank policy supports {symbol[3:]} strength",
-                f"Market volatility affects {symbol} trading sentiment"
+                f"Central bank raises interest rates affecting {base_currency} strength",
+                f"Economic indicators show positive outlook for {base_currency}",
+                f"Market volatility increases in {base_currency}/{quote_currency} trading",
+                f"Inflation data impacts {quote_currency} monetary policy decisions",
+                f"Trade tensions affect {base_currency} and {quote_currency} exchange rates",
+                f"GDP growth exceeds expectations in {base_currency} region",
+                f"Employment data shows improvement in {quote_currency} economy"
             ]
             
             sentiments = []
+            analyzed_sources = []
+            
             for news in sample_news:
-                result = sentiment_analyzer(news)
-                sentiments.append(result[0])
+                try:
+                    # Analyze sentiment using HuggingFace model
+                    result = sentiment_analyzer(news)
+                    
+                    # Convert model output to standard format
+                    if result[0]['label'] == 'LABEL_2':  # Positive
+                        sentiment_label = 'positive'
+                        confidence = result[0]['score']
+                    elif result[0]['label'] == 'LABEL_0':  # Negative
+                        sentiment_label = 'negative'
+                        confidence = result[0]['score']
+                    else:  # Neutral
+                        sentiment_label = 'neutral'
+                        confidence = result[0]['score']
+                    
+                    sentiments.append({
+                        'label': sentiment_label,
+                        'confidence': confidence
+                    })
+                    
+                    analyzed_sources.append({
+                        'text': news,
+                        'sentiment': sentiment_label,
+                        'confidence': confidence
+                    })
+                    
+                except Exception as e:
+                    print(f"Error analyzing individual news: {e}")
+                    continue
             
-            # Calculate average sentiment
-            positive_count = sum(1 for s in sentiments if s['label'] == 'POSITIVE')
-            negative_count = sum(1 for s in sentiments if s['label'] == 'NEGATIVE')
+            if not sentiments:
+                return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
             
-            if positive_count > negative_count:
-                return {'sentiment': 'positive', 'confidence': 0.7}
-            elif negative_count > positive_count:
-                return {'sentiment': 'negative', 'confidence': 0.7}
+            # Calculate weighted average sentiment
+            positive_count = sum(1 for s in sentiments if s['label'] == 'positive')
+            negative_count = sum(1 for s in sentiments if s['label'] == 'negative')
+            neutral_count = sum(1 for s in sentiments if s['label'] == 'neutral')
+            
+            total_count = len(sentiments)
+            positive_weight = positive_count / total_count
+            negative_weight = negative_count / total_count
+            neutral_weight = neutral_count / total_count
+            
+            # Calculate average confidence
+            avg_confidence = sum(s['confidence'] for s in sentiments) / len(sentiments)
+            
+            # Determine overall sentiment
+            if positive_weight > negative_weight and positive_weight > neutral_weight:
+                overall_sentiment = 'positive'
+                confidence = positive_weight * avg_confidence
+            elif negative_weight > positive_weight and negative_weight > neutral_weight:
+                overall_sentiment = 'negative'
+                confidence = negative_weight * avg_confidence
             else:
-                return {'sentiment': 'neutral', 'confidence': 0.5}
+                overall_sentiment = 'neutral'
+                confidence = neutral_weight * avg_confidence
+            
+            # Apply currency-specific adjustments
+            if base_currency in ['USD', 'EUR', 'GBP']:  # Major currencies
+                confidence *= 1.1  # Slightly higher confidence for major pairs
+            
+            return {
+                'sentiment': overall_sentiment,
+                'confidence': min(confidence, 1.0),
+                'breakdown': {
+                    'positive': positive_weight,
+                    'negative': negative_weight,
+                    'neutral': neutral_weight
+                },
+                'sources': analyzed_sources,
+                'total_analyzed': total_count
+            }
                 
         except Exception as e:
             print(f"Error analyzing sentiment for {symbol}: {e}")
-            return {'sentiment': 'neutral', 'confidence': 0.5}
+            return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
     
     async def run_analysis(self, symbols: List[str] = None):
         """Run complete analysis for specified symbols"""
