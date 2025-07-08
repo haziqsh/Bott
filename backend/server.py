@@ -797,6 +797,9 @@ class ForexTradingAgent:
                 # Calculate indicators
                 data = self.calculate_all_indicators(data)
                 
+                # AI Pattern Analysis
+                pattern_analysis = self.analyze_market_patterns(symbol, data)
+                
                 # Generate signals
                 signals = self.generate_signals(symbol, data)
                 binary_signals = self.generate_binary_signals(symbol, data)
@@ -823,6 +826,7 @@ class ForexTradingAgent:
                         'CCI': float(latest.get('CCI', 0)) if pd.notna(latest.get('CCI', 0)) else 0,
                         'ATR': float(latest.get('ATR', 0)) if pd.notna(latest.get('ATR', 0)) else 0,
                     },
+                    'pattern_analysis': pattern_analysis,
                     'signals': signals,
                     'binary_signals': binary_signals,
                     'sentiment': sentiment,
