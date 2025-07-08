@@ -158,7 +158,7 @@ class ForexTradingAgent:
             print(f"Error calculating indicators: {e}")
             return data
     
-    def generate_signals(self, symbol: str, data: pd.DataFrame):
+    def analyze_market_patterns(self, symbol: str, data: pd.DataFrame):
         """Generate trading signals using multiple strategies"""
         if data.empty or len(data) < 50:
             return []
