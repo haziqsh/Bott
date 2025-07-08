@@ -15,9 +15,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import yfinance as yf
-import pandas_ta as ta
 from alpha_vantage.foreignexchange import ForeignExchange
 from transformers import pipeline
+import ta  # Using ta library instead of pandas-ta
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -37,6 +37,7 @@ api_router = APIRouter(prefix="/api")
 
 # AI Models initialization
 try:
+    # Use a lighter sentiment analysis model to avoid memory issues
     sentiment_analyzer = pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment-latest")
     print("✅ Sentiment Analysis Model Loaded Successfully")
 except Exception as e:
@@ -83,64 +84,63 @@ class ForexTradingAgent:
             return pd.DataFrame()
     
     def calculate_all_indicators(self, data: pd.DataFrame):
-        """Calculate comprehensive technical indicators"""
+        """Calculate comprehensive technical indicators using ta library"""
         if data.empty:
             return {}
             
         try:
-            # Price-based indicators
-            data['SMA_10'] = ta.sma(data['Close'], length=10)
-            data['SMA_20'] = ta.sma(data['Close'], length=20)
-            data['SMA_50'] = ta.sma(data['Close'], length=50)
-            data['SMA_200'] = ta.sma(data['Close'], length=200)
+            # Ensure proper column names
+            data.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
             
-            data['EMA_10'] = ta.ema(data['Close'], length=10)
-            data['EMA_20'] = ta.ema(data['Close'], length=20)
-            data['EMA_50'] = ta.ema(data['Close'], length=50)
+            # Price-based indicators
+            data['SMA_10'] = ta.trend.sma_indicator(data['Close'], window=10)
+            data['SMA_20'] = ta.trend.sma_indicator(data['Close'], window=20)
+            data['SMA_50'] = ta.trend.sma_indicator(data['Close'], window=50)
+            data['SMA_200'] = ta.trend.sma_indicator(data['Close'], window=200)
+            
+            data['EMA_10'] = ta.trend.ema_indicator(data['Close'], window=10)
+            data['EMA_20'] = ta.trend.ema_indicator(data['Close'], window=20)
+            data['EMA_50'] = ta.trend.ema_indicator(data['Close'], window=50)
             
             # Bollinger Bands
-            bb = ta.bbands(data['Close'], length=20, std=2)
-            if bb is not None:
-                data['BB_Upper'] = bb['BBU_20_2.0']
-                data['BB_Middle'] = bb['BBM_20_2.0']
-                data['BB_Lower'] = bb['BBL_20_2.0']
+            bb_high = ta.volatility.bollinger_hband(data['Close'], window=20, window_dev=2)
+            bb_low = ta.volatility.bollinger_lband(data['Close'], window=20, window_dev=2)
+            bb_mid = ta.volatility.bollinger_mavg(data['Close'], window=20)
+            
+            data['BB_Upper'] = bb_high
+            data['BB_Lower'] = bb_low
+            data['BB_Middle'] = bb_mid
             
             # RSI
-            data['RSI'] = ta.rsi(data['Close'], length=14)
+            data['RSI'] = ta.momentum.rsi(data['Close'], window=14)
             
             # MACD
-            macd = ta.macd(data['Close'])
-            if macd is not None:
-                data['MACD'] = macd['MACD_12_26_9']
-                data['MACD_Signal'] = macd['MACDs_12_26_9']
-                data['MACD_Histogram'] = macd['MACDh_12_26_9']
+            data['MACD'] = ta.trend.macd_diff(data['Close'])
+            data['MACD_Signal'] = ta.trend.macd_signal(data['Close'])
+            data['MACD_Histogram'] = ta.trend.macd(data['Close'])
             
             # Stochastic
-            stoch = ta.stoch(data['High'], data['Low'], data['Close'])
-            if stoch is not None:
-                data['Stoch_K'] = stoch['STOCHk_14_3_3']
-                data['Stoch_D'] = stoch['STOCHd_14_3_3']
+            data['Stoch_K'] = ta.momentum.stoch(data['High'], data['Low'], data['Close'])
+            data['Stoch_D'] = ta.momentum.stoch_signal(data['High'], data['Low'], data['Close'])
             
             # Williams %R
-            data['Williams_R'] = ta.willr(data['High'], data['Low'], data['Close'])
+            data['Williams_R'] = ta.momentum.williams_r(data['High'], data['Low'], data['Close'])
             
             # CCI (Commodity Channel Index)
-            data['CCI'] = ta.cci(data['High'], data['Low'], data['Close'])
+            data['CCI'] = ta.trend.cci(data['High'], data['Low'], data['Close'])
             
             # ADX (Average Directional Index)
-            adx = ta.adx(data['High'], data['Low'], data['Close'])
-            if adx is not None:
-                data['ADX'] = adx['ADX_14']
-                data['DI_Plus'] = adx['DMP_14']
-                data['DI_Minus'] = adx['DMN_14']
+            data['ADX'] = ta.trend.adx(data['High'], data['Low'], data['Close'])
+            data['DI_Plus'] = ta.trend.adx_pos(data['High'], data['Low'], data['Close'])
+            data['DI_Minus'] = ta.trend.adx_neg(data['High'], data['Low'], data['Close'])
             
             # ATR (Average True Range)
-            data['ATR'] = ta.atr(data['High'], data['Low'], data['Close'])
+            data['ATR'] = ta.volatility.average_true_range(data['High'], data['Low'], data['Close'])
             
             # Volume indicators (if available)
             if 'Volume' in data.columns:
-                data['Volume_SMA'] = ta.sma(data['Volume'], length=20)
-                data['OBV'] = ta.obv(data['Close'], data['Volume'])
+                data['Volume_SMA'] = ta.trend.sma_indicator(data['Volume'], window=20)
+                data['OBV'] = ta.volume.on_balance_volume(data['Close'], data['Volume'])
             
             # Pivot Points
             data['Pivot'] = (data['High'] + data['Low'] + data['Close']) / 3
@@ -167,136 +167,119 @@ class ForexTradingAgent:
         try:
             # Strategy 1: RSI + MACD Confluence
             if 'RSI' in data.columns and 'MACD' in data.columns and 'MACD_Signal' in data.columns:
-                if latest['RSI'] < 30 and latest['MACD'] > latest['MACD_Signal'] and prev['MACD'] <= prev['MACD_Signal']:
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'BUY',
-                        'strategy': 'RSI_MACD_Confluence',
-                        'strength': 0.8,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['Close'] * 0.995,
-                        'take_profit': latest['Close'] * 1.015,
-                        'timestamp': datetime.now()
-                    })
-                elif latest['RSI'] > 70 and latest['MACD'] < latest['MACD_Signal'] and prev['MACD'] >= prev['MACD_Signal']:
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'SELL',
-                        'strategy': 'RSI_MACD_Confluence',
-                        'strength': 0.8,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['Close'] * 1.005,
-                        'take_profit': latest['Close'] * 0.985,
-                        'timestamp': datetime.now()
-                    })
+                if (pd.notna(latest['RSI']) and pd.notna(latest['MACD']) and 
+                    pd.notna(latest['MACD_Signal']) and pd.notna(prev['MACD']) and pd.notna(prev['MACD_Signal'])):
+                    
+                    if latest['RSI'] < 30 and latest['MACD'] > latest['MACD_Signal'] and prev['MACD'] <= prev['MACD_Signal']:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'RSI_MACD_Confluence',
+                            'strength': 0.8,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 0.995,
+                            'take_profit': latest['Close'] * 1.015,
+                            'timestamp': datetime.now()
+                        })
+                    elif latest['RSI'] > 70 and latest['MACD'] < latest['MACD_Signal'] and prev['MACD'] >= prev['MACD_Signal']:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'RSI_MACD_Confluence',
+                            'strength': 0.8,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 1.005,
+                            'take_profit': latest['Close'] * 0.985,
+                            'timestamp': datetime.now()
+                        })
             
             # Strategy 2: Bollinger Bands + RSI
             if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns and 'RSI' in data.columns:
-                if latest['Close'] <= latest['BB_Lower'] and latest['RSI'] < 30:
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'BUY',
-                        'strategy': 'BB_RSI_Oversold',
-                        'strength': 0.75,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['BB_Lower'] * 0.995,
-                        'take_profit': latest['BB_Middle'],
-                        'timestamp': datetime.now()
-                    })
-                elif latest['Close'] >= latest['BB_Upper'] and latest['RSI'] > 70:
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'SELL',
-                        'strategy': 'BB_RSI_Overbought',
-                        'strength': 0.75,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['BB_Upper'] * 1.005,
-                        'take_profit': latest['BB_Middle'],
-                        'timestamp': datetime.now()
-                    })
+                if (pd.notna(latest['BB_Upper']) and pd.notna(latest['BB_Lower']) and 
+                    pd.notna(latest['RSI']) and pd.notna(latest['BB_Middle'])):
+                    
+                    if latest['Close'] <= latest['BB_Lower'] and latest['RSI'] < 30:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'BB_RSI_Oversold',
+                            'strength': 0.75,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['BB_Lower'] * 0.995,
+                            'take_profit': latest['BB_Middle'],
+                            'timestamp': datetime.now()
+                        })
+                    elif latest['Close'] >= latest['BB_Upper'] and latest['RSI'] > 70:
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'BB_RSI_Overbought',
+                            'strength': 0.75,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['BB_Upper'] * 1.005,
+                            'take_profit': latest['BB_Middle'],
+                            'timestamp': datetime.now()
+                        })
             
             # Strategy 3: EMA Crossover + ADX
             if 'EMA_10' in data.columns and 'EMA_20' in data.columns and 'ADX' in data.columns:
-                if (latest['EMA_10'] > latest['EMA_20'] and prev['EMA_10'] <= prev['EMA_20'] and 
-                    latest['ADX'] > 25):
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'BUY',
-                        'strategy': 'EMA_Cross_ADX',
-                        'strength': 0.7,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['EMA_20'] * 0.995,
-                        'take_profit': latest['Close'] * 1.02,
-                        'timestamp': datetime.now()
-                    })
-                elif (latest['EMA_10'] < latest['EMA_20'] and prev['EMA_10'] >= prev['EMA_20'] and 
-                      latest['ADX'] > 25):
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'SELL',
-                        'strategy': 'EMA_Cross_ADX',
-                        'strength': 0.7,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['EMA_20'] * 1.005,
-                        'take_profit': latest['Close'] * 0.98,
-                        'timestamp': datetime.now()
-                    })
+                if (pd.notna(latest['EMA_10']) and pd.notna(latest['EMA_20']) and 
+                    pd.notna(latest['ADX']) and pd.notna(prev['EMA_10']) and pd.notna(prev['EMA_20'])):
+                    
+                    if (latest['EMA_10'] > latest['EMA_20'] and prev['EMA_10'] <= prev['EMA_20'] and 
+                        latest['ADX'] > 25):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'EMA_Cross_ADX',
+                            'strength': 0.7,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['EMA_20'] * 0.995,
+                            'take_profit': latest['Close'] * 1.02,
+                            'timestamp': datetime.now()
+                        })
+                    elif (latest['EMA_10'] < latest['EMA_20'] and prev['EMA_10'] >= prev['EMA_20'] and 
+                          latest['ADX'] > 25):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'EMA_Cross_ADX',
+                            'strength': 0.7,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['EMA_20'] * 1.005,
+                            'take_profit': latest['Close'] * 0.98,
+                            'timestamp': datetime.now()
+                        })
             
             # Strategy 4: Stochastic + Williams %R
             if 'Stoch_K' in data.columns and 'Stoch_D' in data.columns and 'Williams_R' in data.columns:
-                if (latest['Stoch_K'] < 20 and latest['Stoch_D'] < 20 and 
-                    latest['Williams_R'] < -80 and latest['Stoch_K'] > latest['Stoch_D']):
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'BUY',
-                        'strategy': 'Stoch_Williams_Oversold',
-                        'strength': 0.6,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['Close'] * 0.995,
-                        'take_profit': latest['Close'] * 1.01,
-                        'timestamp': datetime.now()
-                    })
-                elif (latest['Stoch_K'] > 80 and latest['Stoch_D'] > 80 and 
-                      latest['Williams_R'] > -20 and latest['Stoch_K'] < latest['Stoch_D']):
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'SELL',
-                        'strategy': 'Stoch_Williams_Overbought',
-                        'strength': 0.6,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['Close'] * 1.005,
-                        'take_profit': latest['Close'] * 0.99,
-                        'timestamp': datetime.now()
-                    })
-            
-            # Strategy 5: Multiple Moving Average + Volume
-            if ('SMA_10' in data.columns and 'SMA_20' in data.columns and 
-                'SMA_50' in data.columns and 'Volume' in data.columns):
-                vol_avg = data['Volume'].rolling(20).mean().iloc[-1]
-                if (latest['SMA_10'] > latest['SMA_20'] > latest['SMA_50'] and 
-                    latest['Volume'] > vol_avg * 1.2):
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'BUY',
-                        'strategy': 'Multi_MA_Volume',
-                        'strength': 0.65,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['SMA_20'] * 0.995,
-                        'take_profit': latest['Close'] * 1.015,
-                        'timestamp': datetime.now()
-                    })
-                elif (latest['SMA_10'] < latest['SMA_20'] < latest['SMA_50'] and 
-                      latest['Volume'] > vol_avg * 1.2):
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'SELL',
-                        'strategy': 'Multi_MA_Volume',
-                        'strength': 0.65,
-                        'entry_price': latest['Close'],
-                        'stop_loss': latest['SMA_20'] * 1.005,
-                        'take_profit': latest['Close'] * 0.985,
-                        'timestamp': datetime.now()
-                    })
+                if (pd.notna(latest['Stoch_K']) and pd.notna(latest['Stoch_D']) and 
+                    pd.notna(latest['Williams_R'])):
+                    
+                    if (latest['Stoch_K'] < 20 and latest['Stoch_D'] < 20 and 
+                        latest['Williams_R'] < -80 and latest['Stoch_K'] > latest['Stoch_D']):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'BUY',
+                            'strategy': 'Stoch_Williams_Oversold',
+                            'strength': 0.6,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 0.995,
+                            'take_profit': latest['Close'] * 1.01,
+                            'timestamp': datetime.now()
+                        })
+                    elif (latest['Stoch_K'] > 80 and latest['Stoch_D'] > 80 and 
+                          latest['Williams_R'] > -20 and latest['Stoch_K'] < latest['Stoch_D']):
+                        signals.append({
+                            'symbol': symbol,
+                            'type': 'SELL',
+                            'strategy': 'Stoch_Williams_Overbought',
+                            'strength': 0.6,
+                            'entry_price': latest['Close'],
+                            'stop_loss': latest['Close'] * 1.005,
+                            'take_profit': latest['Close'] * 0.99,
+                            'timestamp': datetime.now()
+                        })
             
             return signals
             
@@ -314,7 +297,7 @@ class ForexTradingAgent:
         
         try:
             # High-frequency scalping signals
-            if 'RSI' in data.columns and 'MACD' in data.columns:
+            if 'RSI' in data.columns and pd.notna(latest['RSI']):
                 # Quick RSI bounce signals
                 if latest['RSI'] < 25:
                     binary_signals.append({
@@ -338,29 +321,32 @@ class ForexTradingAgent:
                     })
             
             # Bollinger Band squeeze signals
-            if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns:
-                bb_width = (latest['BB_Upper'] - latest['BB_Lower']) / latest['BB_Middle']
-                if bb_width < 0.02:  # Tight squeeze
-                    if latest['Close'] > latest['BB_Middle']:
-                        binary_signals.append({
-                            'symbol': symbol,
-                            'type': 'CALL',
-                            'strategy': 'BB_Squeeze_Breakout',
-                            'expiry': '5m',
-                            'strength': 0.6,
-                            'entry_price': latest['Close'],
-                            'timestamp': datetime.now()
-                        })
-                    else:
-                        binary_signals.append({
-                            'symbol': symbol,
-                            'type': 'PUT',
-                            'strategy': 'BB_Squeeze_Breakout',
-                            'expiry': '5m',
-                            'strength': 0.6,
-                            'entry_price': latest['Close'],
-                            'timestamp': datetime.now()
-                        })
+            if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns and 'BB_Middle' in data.columns:
+                if (pd.notna(latest['BB_Upper']) and pd.notna(latest['BB_Lower']) and 
+                    pd.notna(latest['BB_Middle'])):
+                    
+                    bb_width = (latest['BB_Upper'] - latest['BB_Lower']) / latest['BB_Middle']
+                    if bb_width < 0.02:  # Tight squeeze
+                        if latest['Close'] > latest['BB_Middle']:
+                            binary_signals.append({
+                                'symbol': symbol,
+                                'type': 'CALL',
+                                'strategy': 'BB_Squeeze_Breakout',
+                                'expiry': '5m',
+                                'strength': 0.6,
+                                'entry_price': latest['Close'],
+                                'timestamp': datetime.now()
+                            })
+                        else:
+                            binary_signals.append({
+                                'symbol': symbol,
+                                'type': 'PUT',
+                                'strategy': 'BB_Squeeze_Breakout',
+                                'expiry': '5m',
+                                'strength': 0.6,
+                                'entry_price': latest['Close'],
+                                'timestamp': datetime.now()
+                            })
             
             return binary_signals
             
