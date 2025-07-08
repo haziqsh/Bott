@@ -36,13 +36,8 @@ app = FastAPI(title="Forex AI Trading Agent", description="Ultimate AI-Powered F
 api_router = APIRouter(prefix="/api")
 
 # AI Models initialization
-try:
-    # Use a lighter sentiment analysis model to avoid memory issues
-    sentiment_analyzer = pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment-latest")
-    print("✅ Sentiment Analysis Model Loaded Successfully")
-except Exception as e:
-    print(f"❌ Error loading sentiment model: {e}")
-    sentiment_analyzer = None
+sentiment_analyzer = None  # Disable for now to speed up startup
+print("⚠️ Sentiment Analysis disabled for faster startup")
 
 # Alpha Vantage API setup (free tier)
 AV_API_KEY = "demo"  # Using demo key for development
