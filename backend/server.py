@@ -910,6 +910,63 @@ async def get_performance_metrics():
     """Get performance metrics and strategy accuracy"""
     return {"metrics": trading_agent.performance_metrics}
 
+@api_router.post("/forex/pattern-analysis")
+async def get_pattern_analysis(request: ForexAnalysisRequest):
+    """Get detailed AI pattern analysis for forex pairs"""
+    try:
+        if not request.symbols:
+            symbols = trading_agent.major_pairs[:5]
+        else:
+            symbols = request.symbols
+        
+        results = []
+        for symbol in symbols:
+            data = trading_agent.get_forex_data(symbol, request.timeframe or '1h', 200)
+            if not data.empty:
+                data = trading_agent.calculate_all_indicators(data)
+                pattern_analysis = trading_agent.analyze_market_patterns(symbol, data)
+                results.append(pattern_analysis)
+        
+        return {"status": "success", "data": results}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.get("/forex/ai-insights/{symbol}")
+async def get_ai_insights(symbol: str):
+    """Get comprehensive AI insights for a specific currency pair"""
+    try:
+        data = trading_agent.get_forex_data(symbol, '1h', 200)
+        if data.empty:
+            return {"status": "error", "message": "No data available"}
+        
+        data = trading_agent.calculate_all_indicators(data)
+        
+        # Multi-timeframe analysis
+        insights = {}
+        timeframes = ['1h', '4h', '1d']
+        
+        for tf in timeframes:
+            tf_data = trading_agent.get_forex_data(symbol, tf, 100)
+            if not tf_data.empty:
+                tf_data = trading_agent.calculate_all_indicators(tf_data)
+                insights[tf] = {
+                    'pattern_analysis': trading_agent.analyze_market_patterns(symbol, tf_data),
+                    'signals': trading_agent.generate_signals(symbol, tf_data),
+                    'binary_signals': trading_agent.generate_binary_signals(symbol, tf_data)
+                }
+        
+        sentiment = trading_agent.analyze_sentiment(symbol)
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "multi_timeframe_analysis": insights,
+            "sentiment_analysis": sentiment,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @api_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time trading updates"""
