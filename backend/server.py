@@ -204,136 +204,241 @@ class ForexTradingAgent:
         except Exception as e:
             print(f"Error analyzing patterns for {symbol}: {e}")
             return {'pattern': 'error', 'confidence': 0.0, 'trend': 'unknown'}
-        """Generate trading signals using multiple strategies"""
-        if data.empty or len(data) < 50:
-            return []
-            
-        signals = []
-        latest = data.iloc[-1]
-        prev = data.iloc[-2]
-        
+    def detect_trend(self, data: pd.DataFrame):
+        """Detect trend using multiple indicators"""
         try:
-            # Strategy 1: RSI + MACD Confluence
-            if 'RSI' in data.columns and 'MACD' in data.columns and 'MACD_Signal' in data.columns:
-                if (pd.notna(latest['RSI']) and pd.notna(latest['MACD']) and 
-                    pd.notna(latest['MACD_Signal']) and pd.notna(prev['MACD']) and pd.notna(prev['MACD_Signal'])):
-                    
-                    if latest['RSI'] < 30 and latest['MACD'] > latest['MACD_Signal'] and prev['MACD'] <= prev['MACD_Signal']:
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'BUY',
-                            'strategy': 'RSI_MACD_Confluence',
-                            'strength': 0.8,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['Close'] * 0.995,
-                            'take_profit': latest['Close'] * 1.015,
-                            'timestamp': datetime.now()
-                        })
-                    elif latest['RSI'] > 70 and latest['MACD'] < latest['MACD_Signal'] and prev['MACD'] >= prev['MACD_Signal']:
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'SELL',
-                            'strategy': 'RSI_MACD_Confluence',
-                            'strength': 0.8,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['Close'] * 1.005,
-                            'take_profit': latest['Close'] * 0.985,
-                            'timestamp': datetime.now()
-                        })
+            if data.empty or len(data) < 10:
+                return 'unknown'
             
-            # Strategy 2: Bollinger Bands + RSI
-            if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns and 'RSI' in data.columns:
-                if (pd.notna(latest['BB_Upper']) and pd.notna(latest['BB_Lower']) and 
-                    pd.notna(latest['RSI']) and pd.notna(latest['BB_Middle'])):
-                    
-                    if latest['Close'] <= latest['BB_Lower'] and latest['RSI'] < 30:
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'BUY',
-                            'strategy': 'BB_RSI_Oversold',
-                            'strength': 0.75,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['BB_Lower'] * 0.995,
-                            'take_profit': latest['BB_Middle'],
-                            'timestamp': datetime.now()
-                        })
-                    elif latest['Close'] >= latest['BB_Upper'] and latest['RSI'] > 70:
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'SELL',
-                            'strategy': 'BB_RSI_Overbought',
-                            'strength': 0.75,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['BB_Upper'] * 1.005,
-                            'take_profit': latest['BB_Middle'],
-                            'timestamp': datetime.now()
-                        })
+            # EMA trend
+            ema_short = data['Close'].ewm(span=8).mean()
+            ema_long = data['Close'].ewm(span=21).mean()
             
-            # Strategy 3: EMA Crossover + ADX
-            if 'EMA_10' in data.columns and 'EMA_20' in data.columns and 'ADX' in data.columns:
-                if (pd.notna(latest['EMA_10']) and pd.notna(latest['EMA_20']) and 
-                    pd.notna(latest['ADX']) and pd.notna(prev['EMA_10']) and pd.notna(prev['EMA_20'])):
-                    
-                    if (latest['EMA_10'] > latest['EMA_20'] and prev['EMA_10'] <= prev['EMA_20'] and 
-                        latest['ADX'] > 25):
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'BUY',
-                            'strategy': 'EMA_Cross_ADX',
-                            'strength': 0.7,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['EMA_20'] * 0.995,
-                            'take_profit': latest['Close'] * 1.02,
-                            'timestamp': datetime.now()
-                        })
-                    elif (latest['EMA_10'] < latest['EMA_20'] and prev['EMA_10'] >= prev['EMA_20'] and 
-                          latest['ADX'] > 25):
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'SELL',
-                            'strategy': 'EMA_Cross_ADX',
-                            'strength': 0.7,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['EMA_20'] * 1.005,
-                            'take_profit': latest['Close'] * 0.98,
-                            'timestamp': datetime.now()
-                        })
+            current_ema_short = ema_short.iloc[-1]
+            current_ema_long = ema_long.iloc[-1]
+            prev_ema_short = ema_short.iloc[-2]
+            prev_ema_long = ema_long.iloc[-2]
             
-            # Strategy 4: Stochastic + Williams %R
-            if 'Stoch_K' in data.columns and 'Stoch_D' in data.columns and 'Williams_R' in data.columns:
-                if (pd.notna(latest['Stoch_K']) and pd.notna(latest['Stoch_D']) and 
-                    pd.notna(latest['Williams_R'])):
-                    
-                    if (latest['Stoch_K'] < 20 and latest['Stoch_D'] < 20 and 
-                        latest['Williams_R'] < -80 and latest['Stoch_K'] > latest['Stoch_D']):
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'BUY',
-                            'strategy': 'Stoch_Williams_Oversold',
-                            'strength': 0.6,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['Close'] * 0.995,
-                            'take_profit': latest['Close'] * 1.01,
-                            'timestamp': datetime.now()
-                        })
-                    elif (latest['Stoch_K'] > 80 and latest['Stoch_D'] > 80 and 
-                          latest['Williams_R'] > -20 and latest['Stoch_K'] < latest['Stoch_D']):
-                        signals.append({
-                            'symbol': symbol,
-                            'type': 'SELL',
-                            'strategy': 'Stoch_Williams_Overbought',
-                            'strength': 0.6,
-                            'entry_price': latest['Close'],
-                            'stop_loss': latest['Close'] * 1.005,
-                            'take_profit': latest['Close'] * 0.99,
-                            'timestamp': datetime.now()
-                        })
+            # Price trend
+            price_trend = 'up' if data['Close'].iloc[-1] > data['Close'].iloc[-5] else 'down'
             
-            return signals
+            # EMA trend
+            ema_trend = 'up' if current_ema_short > current_ema_long else 'down'
+            
+            # ADX trend strength
+            adx_value = data.get('ADX', pd.Series([0])).iloc[-1] if 'ADX' in data.columns else 0
+            trend_strength = 'strong' if adx_value > 25 else 'weak'
+            
+            # Combine signals
+            if price_trend == 'up' and ema_trend == 'up' and trend_strength == 'strong':
+                return 'strong_uptrend'
+            elif price_trend == 'up' and ema_trend == 'up':
+                return 'uptrend'
+            elif price_trend == 'down' and ema_trend == 'down' and trend_strength == 'strong':
+                return 'strong_downtrend'
+            elif price_trend == 'down' and ema_trend == 'down':
+                return 'downtrend'
+            else:
+                return 'sideways'
+                
+        except Exception as e:
+            print(f"Error detecting trend: {e}")
+            return 'unknown'
+    
+    def detect_chart_patterns(self, data: pd.DataFrame):
+        """Detect common chart patterns"""
+        try:
+            if data.empty or len(data) < 20:
+                return {'pattern': 'insufficient_data', 'reliability': 0.0}
+            
+            patterns = []
+            
+            # Support and Resistance levels
+            highs = data['High'].rolling(window=5).max()
+            lows = data['Low'].rolling(window=5).min()
+            
+            # Double Top/Bottom detection
+            recent_highs = highs.tail(10)
+            recent_lows = lows.tail(10)
+            
+            # Head and Shoulders detection
+            if len(recent_highs) >= 3:
+                high_values = recent_highs.values
+                if len(high_values) >= 3:
+                    if abs(high_values[-1] - high_values[-3]) < abs(high_values[-2] - high_values[-1]) * 0.5:
+                        patterns.append({'pattern': 'head_and_shoulders', 'reliability': 0.7})
+            
+            # Triangle patterns
+            if len(data) >= 20:
+                price_range = data['High'].tail(20) - data['Low'].tail(20)
+                if price_range.std() < price_range.mean() * 0.3:
+                    patterns.append({'pattern': 'triangle', 'reliability': 0.6})
+            
+            # Breakout patterns
+            if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns:
+                bb_squeeze = (data['BB_Upper'] - data['BB_Lower']) / data['Close']
+                if bb_squeeze.iloc[-1] < bb_squeeze.mean() * 0.8:
+                    patterns.append({'pattern': 'squeeze', 'reliability': 0.8})
+            
+            return patterns if patterns else [{'pattern': 'no_pattern', 'reliability': 0.0}]
             
         except Exception as e:
-            print(f"Error generating signals for {symbol}: {e}")
-            return []
+            print(f"Error detecting chart patterns: {e}")
+            return [{'pattern': 'error', 'reliability': 0.0}]
+    
+    def analyze_volume_pattern(self, data: pd.DataFrame):
+        """Analyze volume patterns"""
+        try:
+            if 'Volume' not in data.columns or data['Volume'].sum() == 0:
+                return {'pattern': 'no_volume_data', 'strength': 0.0}
+            
+            volume_avg = data['Volume'].mean()
+            current_volume = data['Volume'].iloc[-1]
+            
+            volume_ratio = current_volume / volume_avg
+            
+            if volume_ratio > 1.5:
+                return {'pattern': 'high_volume', 'strength': min(volume_ratio, 3.0)}
+            elif volume_ratio < 0.5:
+                return {'pattern': 'low_volume', 'strength': volume_ratio}
+            else:
+                return {'pattern': 'normal_volume', 'strength': volume_ratio}
+                
+        except Exception as e:
+            print(f"Error analyzing volume: {e}")
+            return {'pattern': 'error', 'strength': 0.0}
+    
+    def analyze_volatility(self, data: pd.DataFrame):
+        """Analyze market volatility state"""
+        try:
+            if data.empty or len(data) < 10:
+                return {'state': 'unknown', 'level': 0.0}
+            
+            # Calculate ATR-based volatility
+            atr_current = data.get('ATR', pd.Series([0])).iloc[-1] if 'ATR' in data.columns else 0
+            atr_avg = data.get('ATR', pd.Series([0])).mean() if 'ATR' in data.columns else 0
+            
+            if atr_avg > 0:
+                volatility_ratio = atr_current / atr_avg
+                if volatility_ratio > 1.5:
+                    return {'state': 'high_volatility', 'level': min(volatility_ratio, 3.0)}
+                elif volatility_ratio < 0.7:
+                    return {'state': 'low_volatility', 'level': volatility_ratio}
+                else:
+                    return {'state': 'normal_volatility', 'level': volatility_ratio}
+            
+            return {'state': 'unknown', 'level': 0.0}
+            
+        except Exception as e:
+            print(f"Error analyzing volatility: {e}")
+            return {'state': 'error', 'level': 0.0}
+    
+    def detect_market_regime(self, data: pd.DataFrame):
+        """Detect current market regime"""
+        try:
+            if data.empty or len(data) < 50:
+                return {'regime': 'unknown', 'confidence': 0.0}
+            
+            # Calculate regime indicators
+            sma_20 = data['Close'].rolling(window=20).mean()
+            sma_50 = data['Close'].rolling(window=50).mean()
+            
+            # Volatility regime
+            volatility = data['Close'].rolling(window=20).std()
+            vol_avg = volatility.mean()
+            current_vol = volatility.iloc[-1]
+            
+            # Trend regime
+            price_above_sma20 = data['Close'].iloc[-1] > sma_20.iloc[-1]
+            sma20_above_sma50 = sma_20.iloc[-1] > sma_50.iloc[-1]
+            
+            # Determine regime
+            if price_above_sma20 and sma20_above_sma50:
+                if current_vol < vol_avg * 0.8:
+                    return {'regime': 'trending_bull_low_vol', 'confidence': 0.8}
+                else:
+                    return {'regime': 'trending_bull_high_vol', 'confidence': 0.7}
+            elif not price_above_sma20 and not sma20_above_sma50:
+                if current_vol < vol_avg * 0.8:
+                    return {'regime': 'trending_bear_low_vol', 'confidence': 0.8}
+                else:
+                    return {'regime': 'trending_bear_high_vol', 'confidence': 0.7}
+            else:
+                return {'regime': 'ranging', 'confidence': 0.6}
+                
+        except Exception as e:
+            print(f"Error detecting market regime: {e}")
+            return {'regime': 'error', 'confidence': 0.0}
+    
+    def predict_trend_direction(self, data: pd.DataFrame):
+        """AI-powered trend direction prediction"""
+        try:
+            if data.empty or len(data) < 50:
+                return {'direction': 'unknown', 'confidence': 0.0, 'horizon': '1h'}
+            
+            # Feature engineering for prediction
+            features = []
+            
+            # Price momentum
+            price_momentum = (data['Close'].iloc[-1] - data['Close'].iloc[-10]) / data['Close'].iloc[-10]
+            features.append(price_momentum)
+            
+            # RSI momentum
+            rsi_current = data.get('RSI', pd.Series([50])).iloc[-1] if 'RSI' in data.columns else 50
+            rsi_momentum = (rsi_current - 50) / 50
+            features.append(rsi_momentum)
+            
+            # MACD momentum
+            macd_current = data.get('MACD', pd.Series([0])).iloc[-1] if 'MACD' in data.columns else 0
+            macd_signal = data.get('MACD_Signal', pd.Series([0])).iloc[-1] if 'MACD_Signal' in data.columns else 0
+            macd_momentum = macd_current - macd_signal
+            features.append(macd_momentum)
+            
+            # Volume momentum
+            if 'Volume' in data.columns:
+                volume_momentum = (data['Volume'].iloc[-5:].mean() - data['Volume'].iloc[-20:-5].mean()) / data['Volume'].iloc[-20:-5].mean()
+                features.append(volume_momentum)
+            else:
+                features.append(0)
+            
+            # Simple ensemble prediction
+            bullish_signals = sum(1 for f in features if f > 0.1)
+            bearish_signals = sum(1 for f in features if f < -0.1)
+            
+            if bullish_signals > bearish_signals:
+                confidence = min(bullish_signals / len(features), 0.9)
+                return {'direction': 'bullish', 'confidence': confidence, 'horizon': '1h'}
+            elif bearish_signals > bullish_signals:
+                confidence = min(bearish_signals / len(features), 0.9)
+                return {'direction': 'bearish', 'confidence': confidence, 'horizon': '1h'}
+            else:
+                return {'direction': 'neutral', 'confidence': 0.5, 'horizon': '1h'}
+                
+        except Exception as e:
+            print(f"Error predicting trend: {e}")
+            return {'direction': 'error', 'confidence': 0.0, 'horizon': '1h'}
+    
+    def calculate_pattern_confidence(self, short_trend, medium_trend, long_trend, patterns):
+        """Calculate overall pattern confidence"""
+        try:
+            confidence = 0.5  # Base confidence
+            
+            # Trend alignment bonus
+            if short_trend == medium_trend == long_trend:
+                confidence += 0.3
+            elif short_trend == medium_trend or medium_trend == long_trend:
+                confidence += 0.1
+            
+            # Pattern reliability bonus
+            if patterns:
+                avg_pattern_reliability = sum(p.get('reliability', 0) for p in patterns) / len(patterns)
+                confidence += avg_pattern_reliability * 0.2
+            
+            return min(confidence, 1.0)
+            
+        except Exception as e:
+            print(f"Error calculating confidence: {e}")
+            return 0.5
     
     def generate_binary_signals(self, symbol: str, data: pd.DataFrame):
         """Generate high-frequency binary trading signals"""
