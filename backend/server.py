@@ -18,8 +18,26 @@ import yfinance as yf
 from alpha_vantage.foreignexchange import ForeignExchange
 from transformers import pipeline
 import ta  # Using ta library instead of pandas-ta
+import tensorflow as tf
+import xgboost as xgb
+import lightgbm as lgb
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestClassifier
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 import warnings
 warnings.filterwarnings('ignore')
+
+# Import advanced trading strategies
+from trading_strategies import (
+    NostalgiaForInfinityStrategy,
+    IchimokuStrategy,
+    SuperTrendStrategy,
+    LSTMNeuralStrategy,
+    BinaryOptionsStrategy,
+    QuantitativeFinanceStrategy
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
