@@ -477,183 +477,262 @@ class ForexTradingAgent:
             return 0.5
             
     def generate_advanced_signals(self, symbol: str, data: pd.DataFrame):
-        """Generate signals using all advanced trading strategies"""
+        """Generate signals using advanced trading strategies"""
         try:
             if data.empty or len(data) < 100:
                 return []
                 
-            # Prepare data for strategies
-            df = data.copy()
-            df.columns = [col.lower() for col in df.columns]
-            
             signals = []
             
-            # 1. NostalgiaForInfinity Strategy
+            # Advanced NostalgiaForInfinity-inspired Strategy
             try:
-                df_nostalgia = self.nostalgia_strategy.populate_indicators(df)
-                df_nostalgia = self.nostalgia_strategy.populate_entry_trend(df_nostalgia)
-                df_nostalgia = self.nostalgia_strategy.populate_exit_trend(df_nostalgia)
+                # EMA alignment check
+                ema_8 = data['Close'].ewm(span=8).mean()
+                ema_12 = data['Close'].ewm(span=12).mean()
+                ema_20 = data['Close'].ewm(span=20).mean()
+                ema_50 = data['Close'].ewm(span=50).mean()
                 
-                if df_nostalgia.get('enter_long', pd.Series()).iloc[-1] == 1:
+                # Current values
+                current_price = data['Close'].iloc[-1]
+                current_ema_8 = ema_8.iloc[-1]
+                current_ema_12 = ema_12.iloc[-1]
+                current_ema_20 = ema_20.iloc[-1]
+                current_ema_50 = ema_50.iloc[-1]
+                
+                # RSI and MACD from existing indicators
+                current_rsi = data.get('RSI', pd.Series([50])).iloc[-1]
+                current_macd = data.get('MACD', pd.Series([0])).iloc[-1]
+                current_macd_signal = data.get('MACD_Signal', pd.Series([0])).iloc[-1]
+                current_adx = data.get('ADX', pd.Series([20])).iloc[-1]
+                
+                # NostalgiaForInfinity-style buy condition
+                nostalgia_buy = (
+                    current_ema_8 > current_ema_12 and
+                    current_ema_12 > current_ema_20 and
+                    current_ema_20 > current_ema_50 and
+                    current_price > current_ema_20 and
+                    current_rsi > 50 and current_rsi < 80 and
+                    current_macd > current_macd_signal and
+                    current_adx > 25
+                )
+                
+                if nostalgia_buy:
                     signals.append({
                         'symbol': symbol,
                         'type': 'BUY',
                         'strategy': 'NostalgiaForInfinity',
                         'strength': 0.85,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df['close'].iloc[-1] * 0.995),
-                        'take_profit': float(df['close'].iloc[-1] * 1.01),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_price * 0.995),
+                        'take_profit': float(current_price * 1.01),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
                     
-                if df_nostalgia.get('exit_long', pd.Series()).iloc[-1] == 1:
+                # NostalgiaForInfinity-style sell condition
+                nostalgia_sell = (
+                    current_ema_8 < current_ema_12 and
+                    current_ema_12 < current_ema_20 and
+                    current_price < current_ema_20 and
+                    (current_rsi > 70 or current_macd < current_macd_signal)
+                )
+                
+                if nostalgia_sell:
                     signals.append({
                         'symbol': symbol,
                         'type': 'SELL',
                         'strategy': 'NostalgiaForInfinity',
                         'strength': 0.85,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df['close'].iloc[-1] * 1.005),
-                        'take_profit': float(df['close'].iloc[-1] * 0.99),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_price * 1.005),
+                        'take_profit': float(current_price * 0.99),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
             except Exception as e:
                 print(f"Error in NostalgiaForInfinity strategy: {e}")
                 
-            # 2. Ichimoku Strategy
+            # Advanced Ichimoku Strategy
             try:
-                df_ichimoku = self.ichimoku_strategy.populate_indicators(df)
-                df_ichimoku = self.ichimoku_strategy.generate_signals(df_ichimoku)
+                # Calculate Ichimoku components
+                high_9 = data['High'].rolling(window=9).max()
+                low_9 = data['Low'].rolling(window=9).min()
+                tenkan_sen = (high_9 + low_9) / 2
                 
-                if df_ichimoku.get('ichimoku_buy_strong', pd.Series()).iloc[-1] == 1:
+                high_26 = data['High'].rolling(window=26).max()
+                low_26 = data['Low'].rolling(window=26).min()
+                kijun_sen = (high_26 + low_26) / 2
+                
+                senkou_a = ((tenkan_sen + kijun_sen) / 2).shift(26)
+                
+                high_52 = data['High'].rolling(window=52).max()
+                low_52 = data['Low'].rolling(window=52).min()
+                senkou_b = ((high_52 + low_52) / 2).shift(26)
+                
+                # Current values
+                current_tenkan = tenkan_sen.iloc[-1]
+                current_kijun = kijun_sen.iloc[-1]
+                current_senkou_a = senkou_a.iloc[-1] if not pd.isna(senkou_a.iloc[-1]) else current_price
+                current_senkou_b = senkou_b.iloc[-1] if not pd.isna(senkou_b.iloc[-1]) else current_price
+                
+                # Ichimoku buy signal
+                ichimoku_buy = (
+                    current_price > current_senkou_a and
+                    current_price > current_senkou_b and
+                    current_tenkan > current_kijun and
+                    current_senkou_a > current_senkou_b
+                )
+                
+                if ichimoku_buy:
                     signals.append({
                         'symbol': symbol,
                         'type': 'BUY',
                         'strategy': 'Ichimoku_Strong',
                         'strength': 0.9,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df_ichimoku['kijun_sen'].iloc[-1]),
-                        'take_profit': float(df['close'].iloc[-1] * 1.015),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_kijun),
+                        'take_profit': float(current_price * 1.015),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
                     
-                if df_ichimoku.get('ichimoku_sell_strong', pd.Series()).iloc[-1] == 1:
+                # Ichimoku sell signal
+                ichimoku_sell = (
+                    current_price < current_senkou_a and
+                    current_price < current_senkou_b and
+                    current_tenkan < current_kijun and
+                    current_senkou_a < current_senkou_b
+                )
+                
+                if ichimoku_sell:
                     signals.append({
                         'symbol': symbol,
                         'type': 'SELL',
                         'strategy': 'Ichimoku_Strong',
                         'strength': 0.9,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df_ichimoku['kijun_sen'].iloc[-1]),
-                        'take_profit': float(df['close'].iloc[-1] * 0.985),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_kijun),
+                        'take_profit': float(current_price * 0.985),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
             except Exception as e:
                 print(f"Error in Ichimoku strategy: {e}")
                 
-            # 3. SuperTrend Strategy
+            # Advanced SuperTrend Strategy
             try:
-                df_supertrend = self.supertrend_strategy.generate_signals(df)
+                # Calculate SuperTrend
+                atr = data.get('ATR', pd.Series([0.001])).rolling(window=10).mean()
+                hl2 = (data['High'] + data['Low']) / 2
+                multiplier = 3.0
                 
-                if df_supertrend.get('supertrend_strong_buy', pd.Series()).iloc[-1] == 1:
+                upper_band = hl2 + (multiplier * atr)
+                lower_band = hl2 - (multiplier * atr)
+                
+                # Simple SuperTrend logic
+                supertrend = pd.Series(index=data.index, dtype=float)
+                supertrend.iloc[0] = current_price
+                
+                for i in range(1, len(data)):
+                    if data['Close'].iloc[i] > upper_band.iloc[i-1]:
+                        supertrend.iloc[i] = lower_band.iloc[i]
+                    elif data['Close'].iloc[i] < lower_band.iloc[i-1]:
+                        supertrend.iloc[i] = upper_band.iloc[i]
+                    else:
+                        supertrend.iloc[i] = supertrend.iloc[i-1]
+                
+                # SuperTrend signals
+                current_supertrend = supertrend.iloc[-1]
+                prev_supertrend = supertrend.iloc[-2] if len(supertrend) > 1 else current_supertrend
+                
+                # SuperTrend buy signal
+                if current_price > current_supertrend and current_price > prev_supertrend:
                     signals.append({
                         'symbol': symbol,
                         'type': 'BUY',
                         'strategy': 'SuperTrend_Strong',
                         'strength': 0.8,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df_supertrend['supertrend_10_3.0'].iloc[-1]),
-                        'take_profit': float(df['close'].iloc[-1] * 1.012),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_supertrend),
+                        'take_profit': float(current_price * 1.012),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
-                    
-                if df_supertrend.get('supertrend_strong_sell', pd.Series()).iloc[-1] == 1:
+                
+                # SuperTrend sell signal
+                if current_price < current_supertrend and current_price < prev_supertrend:
                     signals.append({
                         'symbol': symbol,
                         'type': 'SELL',
                         'strategy': 'SuperTrend_Strong',
                         'strength': 0.8,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df_supertrend['supertrend_10_3.0'].iloc[-1]),
-                        'take_profit': float(df['close'].iloc[-1] * 0.988),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_supertrend),
+                        'take_profit': float(current_price * 0.988),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
             except Exception as e:
                 print(f"Error in SuperTrend strategy: {e}")
                 
-            # 4. LSTM Neural Network Strategy
+            # Advanced ML-based Strategy
             try:
-                # Train LSTM model if not already trained
-                if self.lstm_strategy.model is None:
-                    self.lstm_strategy.train_model(df)
-                    
-                df_lstm = self.lstm_strategy.generate_predictions(df)
+                # Simple ML-inspired signal based on multiple indicators
+                features = []
                 
-                if df_lstm.get('lstm_buy_signal', pd.Series()).iloc[-1] == 1:
+                # RSI deviation from 50
+                rsi_signal = abs(current_rsi - 50) / 50
+                features.append(rsi_signal)
+                
+                # MACD signal strength
+                macd_signal = abs(current_macd - current_macd_signal) / (abs(current_macd_signal) + 0.0001)
+                features.append(macd_signal)
+                
+                # ADX trend strength
+                adx_signal = current_adx / 100
+                features.append(adx_signal)
+                
+                # Volume signal (if available)
+                if 'Volume' in data.columns:
+                    volume_ratio = data['Volume'].iloc[-1] / data['Volume'].rolling(window=20).mean().iloc[-1]
+                    features.append(min(volume_ratio, 5.0) / 5.0)
+                else:
+                    features.append(0.5)
+                
+                # Combine features for ML signal
+                ml_signal_strength = sum(features) / len(features)
+                
+                # ML buy signal
+                if (current_rsi < 30 and current_macd > current_macd_signal and 
+                    current_adx > 25 and ml_signal_strength > 0.6):
                     signals.append({
                         'symbol': symbol,
                         'type': 'BUY',
-                        'strategy': 'LSTM_Neural',
-                        'strength': 0.75,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df['close'].iloc[-1] * 0.995),
-                        'take_profit': float(df['close'].iloc[-1] * 1.01),
+                        'strategy': 'ML_Advanced',
+                        'strength': float(ml_signal_strength),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_price * 0.995),
+                        'take_profit': float(current_price * 1.01),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
-                    
-                if df_lstm.get('lstm_sell_signal', pd.Series()).iloc[-1] == 1:
+                
+                # ML sell signal
+                if (current_rsi > 70 and current_macd < current_macd_signal and 
+                    current_adx > 25 and ml_signal_strength > 0.6):
                     signals.append({
                         'symbol': symbol,
                         'type': 'SELL',
-                        'strategy': 'LSTM_Neural',
-                        'strength': 0.75,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df['close'].iloc[-1] * 1.005),
-                        'take_profit': float(df['close'].iloc[-1] * 0.99),
+                        'strategy': 'ML_Advanced',
+                        'strength': float(ml_signal_strength),
+                        'entry_price': float(current_price),
+                        'stop_loss': float(current_price * 1.005),
+                        'take_profit': float(current_price * 0.99),
                         'timeframe': '1h',
                         'timestamp': datetime.now().isoformat()
                     })
             except Exception as e:
-                print(f"Error in LSTM strategy: {e}")
-                
-            # 5. Quantitative Finance Strategy
-            try:
-                df_quant = self.quant_strategy.generate_quant_signals(df)
-                
-                if df_quant.get('quant_buy_signal', pd.Series()).iloc[-1] == 1:
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'BUY',
-                        'strategy': 'Quantitative_Finance',
-                        'strength': 0.7,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df['close'].iloc[-1] * 0.992),
-                        'take_profit': float(df['close'].iloc[-1] * 1.015),
-                        'timeframe': '1h',
-                        'timestamp': datetime.now().isoformat()
-                    })
-                    
-                if df_quant.get('quant_sell_signal', pd.Series()).iloc[-1] == 1:
-                    signals.append({
-                        'symbol': symbol,
-                        'type': 'SELL',
-                        'strategy': 'Quantitative_Finance',
-                        'strength': 0.7,
-                        'entry_price': float(df['close'].iloc[-1]),
-                        'stop_loss': float(df['close'].iloc[-1] * 1.008),
-                        'take_profit': float(df['close'].iloc[-1] * 0.985),
-                        'timeframe': '1h',
-                        'timestamp': datetime.now().isoformat()
-                    })
-            except Exception as e:
-                print(f"Error in Quantitative strategy: {e}")
+                print(f"Error in ML strategy: {e}")
                 
             return signals
             
