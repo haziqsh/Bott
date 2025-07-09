@@ -1231,8 +1231,252 @@ async def get_pattern_analysis(request: ForexAnalysisRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@api_router.get("/forex/ai-insights/{symbol}")
-async def get_ai_insights(symbol: str):
+@api_router.get("/forex/advanced-signals/{symbol}")
+async def get_advanced_signals(symbol: str):
+    """Get advanced trading signals for a specific symbol using all strategies"""
+    try:
+        data = trading_agent.get_forex_data(symbol, '1h', 200)
+        if data.empty:
+            return {"status": "error", "message": "No data available"}
+        
+        data = trading_agent.calculate_all_indicators(data)
+        signals = trading_agent.generate_advanced_signals(symbol, data)
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "signals": signals,
+            "total_signals": len(signals),
+            "strategies_used": list(set([s['strategy'] for s in signals])),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.get("/forex/binary-signals/{symbol}")
+async def get_binary_signals(symbol: str):
+    """Get ultra-fast binary options signals for OTC markets"""
+    try:
+        # Get 1-minute data for binary options
+        data = trading_agent.get_forex_data(symbol, '1m', 100)
+        if data.empty:
+            return {"status": "error", "message": "No data available"}
+        
+        data = trading_agent.calculate_all_indicators(data)
+        binary_signals = trading_agent.generate_binary_signals(symbol, data)
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "binary_signals": binary_signals,
+            "total_signals": len(binary_signals),
+            "market_type": "OTC",
+            "expiry_options": ["5s", "15s", "30s"],
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.get("/forex/strategy-performance")
+async def get_strategy_performance():
+    """Get performance metrics for all trading strategies"""
+    try:
+        performance = {}
+        
+        for strategy, metrics in trading_agent.strategy_performance.items():
+            if metrics['total_trades'] > 0:
+                win_rate = metrics['wins'] / metrics['total_trades'] * 100
+                performance[strategy] = {
+                    'win_rate': win_rate,
+                    'total_trades': metrics['total_trades'],
+                    'wins': metrics['wins'],
+                    'losses': metrics['losses'],
+                    'status': 'excellent' if win_rate >= 80 else 'good' if win_rate >= 70 else 'needs_improvement'
+                }
+            else:
+                performance[strategy] = {
+                    'win_rate': 0,
+                    'total_trades': 0,
+                    'wins': 0,
+                    'losses': 0,
+                    'status': 'no_data'
+                }
+        
+        return {
+            "status": "success",
+            "strategy_performance": performance,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.post("/forex/backtest")
+async def backtest_strategies(request: ForexAnalysisRequest):
+    """Run backtesting for trading strategies"""
+    try:
+        if not request.symbols:
+            symbols = trading_agent.major_pairs[:3]
+        else:
+            symbols = request.symbols
+            
+        backtest_results = []
+        
+        for symbol in symbols:
+            # Get historical data for backtesting
+            data = trading_agent.get_forex_data(symbol, request.timeframe or '1h', 1000)
+            if data.empty:
+                continue
+                
+            data = trading_agent.calculate_all_indicators(data)
+            
+            # Run backtesting simulation
+            backtest_result = await simulate_backtest(symbol, data)
+            backtest_results.append(backtest_result)
+        
+        return {
+            "status": "success",
+            "backtest_results": backtest_results,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@api_router.get("/forex/market-overview")
+async def get_market_overview():
+    """Get comprehensive market overview with all analysis"""
+    try:
+        symbols = trading_agent.major_pairs[:8]
+        market_overview = {
+            'total_pairs_analyzed': len(symbols),
+            'strong_buy_signals': 0,
+            'strong_sell_signals': 0,
+            'binary_opportunities': 0,
+            'market_sentiment': 'neutral',
+            'top_opportunities': [],
+            'risk_level': 'medium',
+            'pairs_analysis': []
+        }
+        
+        for symbol in symbols:
+            data = trading_agent.get_forex_data(symbol, '1h', 200)
+            if data.empty:
+                continue
+                
+            data = trading_agent.calculate_all_indicators(data)
+            
+            # Get all signals
+            signals = trading_agent.generate_advanced_signals(symbol, data)
+            binary_signals = trading_agent.generate_binary_signals(symbol, data)
+            sentiment = trading_agent.analyze_sentiment(symbol)
+            
+            # Count signal types
+            buy_signals = [s for s in signals if s['type'] == 'BUY']
+            sell_signals = [s for s in signals if s['type'] == 'SELL']
+            
+            if buy_signals:
+                market_overview['strong_buy_signals'] += len(buy_signals)
+            if sell_signals:
+                market_overview['strong_sell_signals'] += len(sell_signals)
+            if binary_signals:
+                market_overview['binary_opportunities'] += len(binary_signals)
+            
+            # Add to top opportunities if high-strength signals
+            high_strength_signals = [s for s in signals if s['strength'] >= 0.8]
+            if high_strength_signals:
+                market_overview['top_opportunities'].extend(high_strength_signals)
+                
+            # Pair analysis
+            latest = data.iloc[-1]
+            pair_analysis = {
+                'symbol': symbol,
+                'current_price': float(latest['Close']),
+                'change_percent': float((latest['Close'] - data.iloc[-2]['Close']) / data.iloc[-2]['Close'] * 100),
+                'signals_count': len(signals),
+                'binary_signals_count': len(binary_signals),
+                'sentiment': sentiment['sentiment'],
+                'trend': 'bullish' if buy_signals else 'bearish' if sell_signals else 'neutral',
+                'volatility': float(latest.get('ATR', 0)),
+                'rsi': float(latest.get('RSI', 50))
+            }
+            market_overview['pairs_analysis'].append(pair_analysis)
+        
+        # Calculate overall market sentiment
+        total_signals = market_overview['strong_buy_signals'] + market_overview['strong_sell_signals']
+        if total_signals > 0:
+            buy_ratio = market_overview['strong_buy_signals'] / total_signals
+            if buy_ratio > 0.6:
+                market_overview['market_sentiment'] = 'bullish'
+            elif buy_ratio < 0.4:
+                market_overview['market_sentiment'] = 'bearish'
+                
+        # Sort top opportunities by strength
+        market_overview['top_opportunities'] = sorted(
+            market_overview['top_opportunities'], 
+            key=lambda x: x['strength'], 
+            reverse=True
+        )[:10]
+        
+        return {
+            "status": "success",
+            "market_overview": market_overview,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+async def simulate_backtest(symbol: str, data: pd.DataFrame):
+    """Simulate backtesting for a trading strategy"""
+    try:
+        # Simple backtesting simulation
+        trades = []
+        balance = 10000  # Starting balance
+        
+        for i in range(100, len(data) - 1):
+            window_data = data.iloc[i-100:i+1]
+            signals = trading_agent.generate_advanced_signals(symbol, window_data)
+            
+            if signals:
+                signal = signals[0]  # Take first signal
+                entry_price = signal['entry_price']
+                
+                # Simulate trade execution
+                if signal['type'] == 'BUY':
+                    exit_price = data.iloc[i+1]['Close']
+                    profit = (exit_price - entry_price) / entry_price * balance * 0.1  # 10% of balance
+                else:
+                    exit_price = data.iloc[i+1]['Close']
+                    profit = (entry_price - exit_price) / entry_price * balance * 0.1
+                
+                balance += profit
+                trades.append({
+                    'entry_price': entry_price,
+                    'exit_price': float(exit_price),
+                    'profit': profit,
+                    'type': signal['type'],
+                    'strategy': signal['strategy']
+                })
+        
+        # Calculate performance metrics
+        total_trades = len(trades)
+        winning_trades = len([t for t in trades if t['profit'] > 0])
+        total_profit = sum(t['profit'] for t in trades)
+        
+        return {
+            'symbol': symbol,
+            'total_trades': total_trades,
+            'winning_trades': winning_trades,
+            'win_rate': (winning_trades / total_trades * 100) if total_trades > 0 else 0,
+            'total_profit': total_profit,
+            'roi': ((balance - 10000) / 10000 * 100),
+            'final_balance': balance
+        }
+        
+    except Exception as e:
+        print(f"Error in backtesting for {symbol}: {e}")
+        return {
+            'symbol': symbol,
+            'error': str(e)
+        }
     """Get comprehensive AI insights for a specific currency pair"""
     try:
         data = trading_agent.get_forex_data(symbol, '1h', 200)
