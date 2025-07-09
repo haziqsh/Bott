@@ -1100,8 +1100,8 @@ class ForexTradingAgent:
                 # AI Pattern Analysis
                 pattern_analysis = self.analyze_market_patterns(symbol, data)
                 
-                # Generate signals
-                signals = self.generate_signals(symbol, data)
+                # Generate advanced signals using all strategies
+                signals = self.generate_advanced_signals(symbol, data)
                 binary_signals = self.generate_binary_signals(symbol, data)
                 
                 # Analyze sentiment
