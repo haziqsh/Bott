@@ -831,6 +831,87 @@ class ForexTradingAgent:
             return []
     
     def generate_binary_signals(self, symbol: str, data: pd.DataFrame):
+        """Generate ultra-fast binary options signals for OTC markets"""
+        try:
+            if data.empty or len(data) < 20:
+                return []
+                
+            # Prepare data for binary strategy
+            df = data.copy()
+            df.columns = [col.lower() for col in df.columns]
+            
+            # Generate binary signals using advanced strategy
+            df_binary = self.binary_strategy.generate_binary_signals(df)
+            
+            binary_signals = []
+            
+            # CALL signals (UP direction)
+            if df_binary.get('binary_call_signal', pd.Series()).iloc[-1] == 1:
+                signal_strength = df_binary.get('binary_signal_strength', pd.Series()).iloc[-1]
+                
+                binary_signals.append({
+                    'symbol': symbol,
+                    'type': 'CALL',
+                    'strategy': 'Binary_Options_Ultra_Fast',
+                    'strength': float(signal_strength),
+                    'entry_price': float(df['close'].iloc[-1]),
+                    'expiry_time': '15s',  # 15-second expiry
+                    'market_type': 'OTC',
+                    'timeframe': '1m',
+                    'timestamp': datetime.now().isoformat(),
+                    'indicators': {
+                        'rsi_fast': float(df_binary.get('rsi_fast', pd.Series()).iloc[-1]),
+                        'stoch_fast': float(df_binary.get('stoch_fast', pd.Series()).iloc[-1]),
+                        'cci_fast': float(df_binary.get('cci_fast', pd.Series()).iloc[-1]),
+                        'williams_fast': float(df_binary.get('williams_fast', pd.Series()).iloc[-1]),
+                        'price_velocity': float(df_binary.get('price_velocity', pd.Series()).iloc[-1])
+                    }
+                })
+                
+            # PUT signals (DOWN direction)
+            if df_binary.get('binary_put_signal', pd.Series()).iloc[-1] == 1:
+                signal_strength = df_binary.get('binary_signal_strength', pd.Series()).iloc[-1]
+                
+                binary_signals.append({
+                    'symbol': symbol,
+                    'type': 'PUT',
+                    'strategy': 'Binary_Options_Ultra_Fast',
+                    'strength': float(signal_strength),
+                    'entry_price': float(df['close'].iloc[-1]),
+                    'expiry_time': '15s',  # 15-second expiry
+                    'market_type': 'OTC',
+                    'timeframe': '1m',
+                    'timestamp': datetime.now().isoformat(),
+                    'indicators': {
+                        'rsi_fast': float(df_binary.get('rsi_fast', pd.Series()).iloc[-1]),
+                        'stoch_fast': float(df_binary.get('stoch_fast', pd.Series()).iloc[-1]),
+                        'cci_fast': float(df_binary.get('cci_fast', pd.Series()).iloc[-1]),
+                        'williams_fast': float(df_binary.get('williams_fast', pd.Series()).iloc[-1]),
+                        'price_velocity': float(df_binary.get('price_velocity', pd.Series()).iloc[-1])
+                    }
+                })
+                
+            # Generate alternative expiry times for different market conditions
+            if binary_signals:
+                # Add 5-second signals for highly volatile conditions
+                if abs(df_binary.get('price_velocity', pd.Series()).iloc[-1]) > 0.002:
+                    ultra_fast_signal = binary_signals[-1].copy()
+                    ultra_fast_signal['expiry_time'] = '5s'
+                    ultra_fast_signal['strategy'] = 'Binary_Options_Ultra_Fast_5s'
+                    binary_signals.append(ultra_fast_signal)
+                    
+                # Add 30-second signals for trending markets
+                if df_binary.get('rsi_fast', pd.Series()).iloc[-1] > 60 or df_binary.get('rsi_fast', pd.Series()).iloc[-1] < 40:
+                    trend_signal = binary_signals[0].copy()
+                    trend_signal['expiry_time'] = '30s'
+                    trend_signal['strategy'] = 'Binary_Options_Trend_30s'
+                    binary_signals.append(trend_signal)
+                    
+            return binary_signals
+            
+        except Exception as e:
+            print(f"Error generating binary signals for {symbol}: {e}")
+            return []
         """Generate high-frequency binary trading signals"""
         if data.empty or len(data) < 10:
             return []
