@@ -927,7 +927,7 @@ class ForexTradingAgent:
             current_stoch_fast = stoch_fast.iloc[-1]
             
             # Fast Williams %R (5 periods)
-            williams_fast = ta.momentum.williams_r(data['High'], data['Low'], data['Close'], window=5)
+            williams_fast = ta.momentum.williams_r(data['High'], data['Low'], data['Close'], lbp=5)
             current_williams_fast = williams_fast.iloc[-1]
             
             # Fast CCI (5 periods)
