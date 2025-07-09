@@ -915,76 +915,148 @@ class ForexTradingAgent:
             if data.empty or len(data) < 20:
                 return []
                 
-            # Prepare data for binary strategy
-            df = data.copy()
-            df.columns = [col.lower() for col in df.columns]
-            
-            # Generate binary signals using advanced strategy
-            df_binary = self.binary_strategy.generate_binary_signals(df)
-            
             binary_signals = []
             
+            # Calculate fast indicators for binary options
+            # Fast RSI (5 periods)
+            rsi_fast = ta.momentum.rsi(data['Close'], window=5)
+            current_rsi_fast = rsi_fast.iloc[-1]
+            
+            # Fast Stochastic (5 periods)
+            stoch_fast = ta.momentum.stoch(data['High'], data['Low'], data['Close'], window=5)
+            current_stoch_fast = stoch_fast.iloc[-1]
+            
+            # Fast Williams %R (5 periods)
+            williams_fast = ta.momentum.williams_r(data['High'], data['Low'], data['Close'], window=5)
+            current_williams_fast = williams_fast.iloc[-1]
+            
+            # Fast CCI (5 periods)
+            cci_fast = ta.trend.cci(data['High'], data['Low'], data['Close'], window=5)
+            current_cci_fast = cci_fast.iloc[-1]
+            
+            # Price velocity (short-term momentum)
+            price_velocity = data['Close'].pct_change().rolling(window=3).mean()
+            current_price_velocity = price_velocity.iloc[-1]
+            
+            # Calculate signal strength
+            signal_strength = (
+                abs(current_rsi_fast - 50) / 50 +
+                abs(current_stoch_fast - 50) / 50 +
+                abs(current_cci_fast) / 100
+            ) / 3
+            
             # CALL signals (UP direction)
-            if df_binary.get('binary_call_signal', pd.Series()).iloc[-1] == 1:
-                signal_strength = df_binary.get('binary_signal_strength', pd.Series()).iloc[-1]
-                
+            call_conditions = []
+            
+            # Oversold bounce condition
+            call_conditions.append(
+                current_rsi_fast < 30 and
+                current_stoch_fast < 20 and
+                current_williams_fast < -80
+            )
+            
+            # Momentum breakout condition
+            call_conditions.append(
+                current_price_velocity > 0.001 and
+                current_cci_fast > 0 and
+                current_williams_fast > -80
+            )
+            
+            # Strong momentum condition
+            call_conditions.append(
+                current_rsi_fast > 50 and
+                current_stoch_fast > 50 and
+                current_price_velocity > 0.0005
+            )
+            
+            # Generate CALL signal if any condition is met
+            if any(call_conditions):
                 binary_signals.append({
                     'symbol': symbol,
                     'type': 'CALL',
                     'strategy': 'Binary_Options_Ultra_Fast',
                     'strength': float(signal_strength),
-                    'entry_price': float(df['close'].iloc[-1]),
-                    'expiry_time': '15s',  # 15-second expiry
+                    'entry_price': float(data['Close'].iloc[-1]),
+                    'expiry_time': '15s',
                     'market_type': 'OTC',
                     'timeframe': '1m',
                     'timestamp': datetime.now().isoformat(),
                     'indicators': {
-                        'rsi_fast': float(df_binary.get('rsi_fast', pd.Series()).iloc[-1]),
-                        'stoch_fast': float(df_binary.get('stoch_fast', pd.Series()).iloc[-1]),
-                        'cci_fast': float(df_binary.get('cci_fast', pd.Series()).iloc[-1]),
-                        'williams_fast': float(df_binary.get('williams_fast', pd.Series()).iloc[-1]),
-                        'price_velocity': float(df_binary.get('price_velocity', pd.Series()).iloc[-1])
+                        'rsi_fast': float(current_rsi_fast),
+                        'stoch_fast': float(current_stoch_fast),
+                        'cci_fast': float(current_cci_fast),
+                        'williams_fast': float(current_williams_fast),
+                        'price_velocity': float(current_price_velocity)
                     }
                 })
                 
             # PUT signals (DOWN direction)
-            if df_binary.get('binary_put_signal', pd.Series()).iloc[-1] == 1:
-                signal_strength = df_binary.get('binary_signal_strength', pd.Series()).iloc[-1]
-                
+            put_conditions = []
+            
+            # Overbought reversal condition
+            put_conditions.append(
+                current_rsi_fast > 70 and
+                current_stoch_fast > 80 and
+                current_williams_fast > -20
+            )
+            
+            # Momentum breakdown condition
+            put_conditions.append(
+                current_price_velocity < -0.001 and
+                current_cci_fast < 0 and
+                current_williams_fast < -20
+            )
+            
+            # Strong bearish momentum condition
+            put_conditions.append(
+                current_rsi_fast < 50 and
+                current_stoch_fast < 50 and
+                current_price_velocity < -0.0005
+            )
+            
+            # Generate PUT signal if any condition is met
+            if any(put_conditions):
                 binary_signals.append({
                     'symbol': symbol,
                     'type': 'PUT',
                     'strategy': 'Binary_Options_Ultra_Fast',
                     'strength': float(signal_strength),
-                    'entry_price': float(df['close'].iloc[-1]),
-                    'expiry_time': '15s',  # 15-second expiry
+                    'entry_price': float(data['Close'].iloc[-1]),
+                    'expiry_time': '15s',
                     'market_type': 'OTC',
                     'timeframe': '1m',
                     'timestamp': datetime.now().isoformat(),
                     'indicators': {
-                        'rsi_fast': float(df_binary.get('rsi_fast', pd.Series()).iloc[-1]),
-                        'stoch_fast': float(df_binary.get('stoch_fast', pd.Series()).iloc[-1]),
-                        'cci_fast': float(df_binary.get('cci_fast', pd.Series()).iloc[-1]),
-                        'williams_fast': float(df_binary.get('williams_fast', pd.Series()).iloc[-1]),
-                        'price_velocity': float(df_binary.get('price_velocity', pd.Series()).iloc[-1])
+                        'rsi_fast': float(current_rsi_fast),
+                        'stoch_fast': float(current_stoch_fast),
+                        'cci_fast': float(current_cci_fast),
+                        'williams_fast': float(current_williams_fast),
+                        'price_velocity': float(current_price_velocity)
                     }
                 })
                 
             # Generate alternative expiry times for different market conditions
             if binary_signals:
                 # Add 5-second signals for highly volatile conditions
-                if abs(df_binary.get('price_velocity', pd.Series()).iloc[-1]) > 0.002:
+                if abs(current_price_velocity) > 0.002:
                     ultra_fast_signal = binary_signals[-1].copy()
                     ultra_fast_signal['expiry_time'] = '5s'
                     ultra_fast_signal['strategy'] = 'Binary_Options_Ultra_Fast_5s'
                     binary_signals.append(ultra_fast_signal)
                     
                 # Add 30-second signals for trending markets
-                if df_binary.get('rsi_fast', pd.Series()).iloc[-1] > 60 or df_binary.get('rsi_fast', pd.Series()).iloc[-1] < 40:
+                if current_rsi_fast > 60 or current_rsi_fast < 40:
                     trend_signal = binary_signals[0].copy()
                     trend_signal['expiry_time'] = '30s'
                     trend_signal['strategy'] = 'Binary_Options_Trend_30s'
                     binary_signals.append(trend_signal)
+                    
+                # Add 1-minute signals for stable trends
+                if signal_strength > 0.7:
+                    stable_signal = binary_signals[0].copy()
+                    stable_signal['expiry_time'] = '1m'
+                    stable_signal['strategy'] = 'Binary_Options_Stable_1m'
+                    binary_signals.append(stable_signal)
                     
             return binary_signals
             
