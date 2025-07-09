@@ -5,7 +5,7 @@ import sys
 from datetime import datetime
 
 class ForexAITradingAgentAPITester:
-    def __init__(self, base_url="https://434c206f-a674-40a4-9303-e33cd6572d94.preview.emergentagent.com"):
+    def __init__(self, base_url="https://cfc9d061-113e-489d-972b-4b2347abd03f.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
