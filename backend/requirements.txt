@@ -48,16 +48,16 @@ ccxt>=4.1.0
 websocket-client>=1.6.0
 schedule>=1.2.0
 # Advanced Trading and AI Libraries
-talib>=0.4.25
+# talib>=0.4.25  # Temporarily commented out
 pytorch-lightning>=2.1.0
 plotly>=5.17.0
 dash>=2.15.0
-quantlib>=1.32
-zipline-reloaded>=3.0.0
+# quantlib>=1.32  # Temporarily commented out
+# zipline-reloaded>=3.0.0  # Temporarily commented out
 # Advanced Technical Analysis
 finta>=1.3
 stockstats>=0.6.0
-ta-lib>=0.4.25
+# ta-lib>=0.4.25  # Temporarily commented out
 # Machine Learning for Trading
 xgboost>=1.7.0
 lightgbm>=4.1.0
