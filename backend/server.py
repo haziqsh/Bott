@@ -30,7 +30,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Import advanced trading strategies
-from trading_strategies import (
+from .trading_strategies import (
     NostalgiaForInfinityStrategy,
     IchimokuStrategy,
     SuperTrendStrategy,
