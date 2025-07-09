@@ -83,12 +83,12 @@ class ForexTradingAgent:
         self.strategy_accuracy = {}
         
         # Initialize advanced trading strategies
-        self.nostalgia_strategy = NostalgiaForInfinityStrategy()
-        self.ichimoku_strategy = IchimokuStrategy()
-        self.supertrend_strategy = SuperTrendStrategy()
-        self.lstm_strategy = LSTMNeuralStrategy()
-        self.binary_strategy = BinaryOptionsStrategy()
-        self.quant_strategy = QuantitativeFinanceStrategy()
+        # self.nostalgia_strategy = NostalgiaForInfinityStrategy()
+        # self.ichimoku_strategy = IchimokuStrategy()
+        # self.supertrend_strategy = SuperTrendStrategy()
+        # self.lstm_strategy = LSTMNeuralStrategy()
+        # self.binary_strategy = BinaryOptionsStrategy()
+        # self.quant_strategy = QuantitativeFinanceStrategy()
         
         # Strategy performance tracking
         self.strategy_performance = {
