@@ -8,10 +8,10 @@ import threading
 from datetime import datetime
 
 class ForexAITradingAgentAPITester:
-    def __init__(self, base_url="https://cfc9d061-113e-489d-972b-4b2347abd03f.preview.emergentagent.com"):
+    def __init__(self, base_url="http://localhost:8001"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
-        self.ws_url = f"wss://{base_url.replace('https://', '')}/api/ws"
+        self.ws_url = f"ws://localhost:8001/api/ws"
         self.tests_run = 0
         self.tests_passed = 0
         self.ws_messages_received = 0
