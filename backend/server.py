@@ -129,7 +129,19 @@ class ForexTradingAgent:
             
         try:
             # Ensure proper column names
-            data.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+            if len(data.columns) >= 5:
+                # Handle yfinance data format
+                if 'Dividends' in data.columns:
+                    # Standard yfinance format
+                    data = data[['Open', 'High', 'Low', 'Close', 'Volume']]
+                else:
+                    # Rename columns if needed
+                    data.columns = data.columns[:5]
+                    data.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+            else:
+                # Not enough columns, create dummy data for testing
+                print(f"Warning: Data has insufficient columns: {data.columns}")
+                return {}
             
             # Price-based indicators
             data['SMA_10'] = ta.trend.sma_indicator(data['Close'], window=10)
