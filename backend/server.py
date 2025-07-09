@@ -82,6 +82,24 @@ class ForexTradingAgent:
         self.performance_metrics = {}
         self.strategy_accuracy = {}
         
+        # Initialize advanced trading strategies
+        self.nostalgia_strategy = NostalgiaForInfinityStrategy()
+        self.ichimoku_strategy = IchimokuStrategy()
+        self.supertrend_strategy = SuperTrendStrategy()
+        self.lstm_strategy = LSTMNeuralStrategy()
+        self.binary_strategy = BinaryOptionsStrategy()
+        self.quant_strategy = QuantitativeFinanceStrategy()
+        
+        # Strategy performance tracking
+        self.strategy_performance = {
+            'nostalgia': {'wins': 0, 'losses': 0, 'total_trades': 0},
+            'ichimoku': {'wins': 0, 'losses': 0, 'total_trades': 0},
+            'supertrend': {'wins': 0, 'losses': 0, 'total_trades': 0},
+            'lstm': {'wins': 0, 'losses': 0, 'total_trades': 0},
+            'binary': {'wins': 0, 'losses': 0, 'total_trades': 0},
+            'quant': {'wins': 0, 'losses': 0, 'total_trades': 0}
+        }
+        
     def get_forex_data(self, symbol: str, timeframe: str = '1h', periods: int = 1000):
         """Get forex data from multiple sources"""
         try:
