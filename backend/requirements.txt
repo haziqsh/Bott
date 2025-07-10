@@ -83,7 +83,7 @@ scikit-image>=0.22.0
 hurst>=0.0.5
 # # pykalman>=0.9.5  # Temporarily commented out  # Temporarily commented out
 # Advanced Financial Models
-# quantlib-python>=1.18  # Temporarily commented out
+# # quantlib-python>=1.18  # Temporarily commented out  # Temporarily commented out
 # Monte Carlo and Optimization
 # pymc>=5.8.0  # Temporarily commented out
 # emcee>=3.1.0  # Temporarily commented out
