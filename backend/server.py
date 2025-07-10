@@ -29,6 +29,10 @@ from plotly.subplots import make_subplots
 import warnings
 warnings.filterwarnings('ignore')
 
+# Import advanced AI models and services
+from .ai_models import AdvancedAIModels
+from .news_sentiment import news_sentiment_service
+
 # Import advanced trading strategies
 # from .trading_strategies import (
 #     NostalgiaForInfinityStrategy,
