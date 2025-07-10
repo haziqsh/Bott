@@ -61,9 +61,11 @@ api_router = APIRouter(prefix="/api")
 # AI Models initialization
 try:
     print("🤖 Loading AI models...")
-    sentiment_analyzer = pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment-latest")
-    pattern_analyzer = pipeline("text-classification", model="nlptown/bert-base-multilingual-uncased-sentiment")
-    print("✅ AI models loaded successfully")
+    # sentiment_analyzer = pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment-latest")
+    # pattern_analyzer = pipeline("text-classification", model="nlptown/bert-base-multilingual-uncased-sentiment")
+    sentiment_analyzer = None
+    pattern_analyzer = None
+    print("⚠️ AI models disabled for testing")
 except Exception as e:
     print(f"⚠️ AI models failed to load: {e}")
     sentiment_analyzer = None
