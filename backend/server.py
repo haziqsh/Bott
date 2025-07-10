@@ -504,12 +504,15 @@ class ForexTradingAgent:
             return 0.5
             
     def generate_advanced_signals(self, symbol: str, data: pd.DataFrame):
-        """Generate signals using advanced trading strategies"""
+        """Generate signals using advanced trading strategies with AI enhancement"""
         try:
             if data.empty or len(data) < 100:
                 return []
                 
             signals = []
+            
+            # Get AI insights first
+            ai_insights = self.get_ai_insights(symbol, data)
             
             # Advanced NostalgiaForInfinity-inspired Strategy
             try:
@@ -532,7 +535,7 @@ class ForexTradingAgent:
                 current_macd_signal = data.get('MACD_Signal', pd.Series([0])).iloc[-1]
                 current_adx = data.get('ADX', pd.Series([20])).iloc[-1]
                 
-                # NostalgiaForInfinity-style buy condition
+                # NostalgiaForInfinity-style buy condition with AI enhancement
                 nostalgia_buy = (
                     current_ema_8 > current_ema_12 and
                     current_ema_12 > current_ema_20 and
@@ -543,20 +546,29 @@ class ForexTradingAgent:
                     current_adx > 25
                 )
                 
+                # Enhance with AI insights
+                ai_boost = 0.0
+                if ai_insights['ensemble']['prediction'] == 'buy':
+                    ai_boost += 0.1
+                if ai_insights['sentiment']['sentiment'] == 'bullish':
+                    ai_boost += 0.05
+                
                 if nostalgia_buy:
+                    strength = min(0.95, 0.85 + ai_boost)
                     signals.append({
                         'symbol': symbol,
                         'type': 'BUY',
-                        'strategy': 'NostalgiaForInfinity',
-                        'strength': 0.85,
+                        'strategy': 'NostalgiaForInfinity (AI Enhanced)',
+                        'strength': strength,
                         'entry_price': float(current_price),
                         'stop_loss': float(current_price * 0.995),
                         'take_profit': float(current_price * 1.01),
                         'timeframe': '1h',
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': datetime.now().isoformat(),
+                        'ai_insights': ai_insights
                     })
                     
-                # NostalgiaForInfinity-style sell condition
+                # NostalgiaForInfinity-style sell condition with AI enhancement
                 nostalgia_sell = (
                     current_ema_8 < current_ema_12 and
                     current_ema_12 < current_ema_20 and
@@ -564,17 +576,26 @@ class ForexTradingAgent:
                     (current_rsi > 70 or current_macd < current_macd_signal)
                 )
                 
+                # Enhance with AI insights
+                ai_boost = 0.0
+                if ai_insights['ensemble']['prediction'] == 'sell':
+                    ai_boost += 0.1
+                if ai_insights['sentiment']['sentiment'] == 'bearish':
+                    ai_boost += 0.05
+                
                 if nostalgia_sell:
+                    strength = min(0.95, 0.85 + ai_boost)
                     signals.append({
                         'symbol': symbol,
                         'type': 'SELL',
-                        'strategy': 'NostalgiaForInfinity',
-                        'strength': 0.85,
+                        'strategy': 'NostalgiaForInfinity (AI Enhanced)',
+                        'strength': strength,
                         'entry_price': float(current_price),
                         'stop_loss': float(current_price * 1.005),
                         'take_profit': float(current_price * 0.99),
                         'timeframe': '1h',
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': datetime.now().isoformat(),
+                        'ai_insights': ai_insights
                     })
             except Exception as e:
                 print(f"Error in NostalgiaForInfinity strategy: {e}")
