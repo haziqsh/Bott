@@ -14,7 +14,7 @@ from typing import List, Dict, Optional
 import re
 from textblob import TextBlob
 import nltk
-from newspaper import Article
+# from newspaper import Article  # Temporarily commented out due to lxml issue
 import warnings
 warnings.filterwarnings('ignore')
 
