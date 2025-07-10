@@ -1613,6 +1613,77 @@ async def backtest_strategies(request: ForexAnalysisRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@api_router.get("/market-overview")
+async def get_market_overview():
+    """Get comprehensive market overview"""
+    try:
+        major_pairs = trading_agent.major_pairs[:10]  # Limit to first 10 pairs
+        market_data = []
+        
+        for pair in major_pairs:
+            try:
+                data = trading_agent.get_forex_data(pair)
+                if not data.empty:
+                    data = trading_agent.calculate_all_indicators(data)
+                    
+                    # Get latest data
+                    latest = data.iloc[-1]
+                    prev = data.iloc[-2] if len(data) > 1 else latest
+                    
+                    # Calculate change
+                    change = latest['Close'] - prev['Close']
+                    change_percent = (change / prev['Close']) * 100
+                    
+                    # Get AI insights
+                    ai_insights = trading_agent.ai_models.get_ai_insights(pair, data)
+                    
+                    market_data.append({
+                        'symbol': pair,
+                        'price': latest['Close'],
+                        'change': change,
+                        'change_percent': change_percent,
+                        'volume': latest.get('Volume', 0),
+                        'indicators': {
+                            'RSI': latest.get('RSI', 0),
+                            'MACD': latest.get('MACD', 0),
+                            'ADX': latest.get('ADX', 0),
+                            'Stoch_K': latest.get('Stoch_K', 0),
+                            'Williams_R': latest.get('Williams_R', 0),
+                            'CCI': latest.get('CCI', 0)
+                        },
+                        'sentiment': ai_insights.get('sentiment', {}),
+                        'ai_score': ai_insights.get('ai_score', 0)
+                    })
+                    
+            except Exception as e:
+                print(f"Error getting data for {pair}: {e}")
+        
+        # Calculate market sentiment
+        total_bullish = sum(1 for item in market_data if item['sentiment'].get('sentiment') == 'bullish')
+        total_bearish = sum(1 for item in market_data if item['sentiment'].get('sentiment') == 'bearish')
+        
+        market_sentiment = {
+            'overall_sentiment': 'bullish' if total_bullish > total_bearish else 'bearish' if total_bearish > total_bullish else 'neutral',
+            'bullish_count': total_bullish,
+            'bearish_count': total_bearish,
+            'neutral_count': len(market_data) - total_bullish - total_bearish,
+            'market_fear_greed': 50 + (total_bullish - total_bearish) * 2  # Simple fear/greed index
+        }
+        
+        # Get top opportunities
+        top_opportunities = sorted(market_data, key=lambda x: x['ai_score'], reverse=True)[:5]
+        
+        return {
+            "market_data": market_data,
+            "market_sentiment": market_sentiment,
+            "top_opportunities": top_opportunities,
+            "timestamp": datetime.now().isoformat(),
+            "active_pairs": len(market_data)
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
 @api_router.get("/advanced-analysis/{symbol}")
 async def get_advanced_analysis(symbol: str):
     """Get comprehensive advanced analysis for a symbol"""
