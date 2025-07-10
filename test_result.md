@@ -226,6 +226,18 @@ backend:
       - working: true
         agent: "main"
         comment: "Comprehensive market overview with sentiment analysis, signal counting, volatility assessment, and top opportunities ranking"
+        
+  - task: "Historical Data API Endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Historical data endpoint for advanced charting with 1000 data points, supporting multiple timeframes and JSON serialization"
 
 frontend:
   - task: "Advanced Trading Dashboard"
