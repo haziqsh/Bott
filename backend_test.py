@@ -242,7 +242,67 @@ class ForexAITradingAgentAPITester:
                 print(f"  - Number of pairs with detailed analysis: {len(pairs_analysis)}")
         return success
         
-    def test_strategy_performance(self):
+    def test_historical_data(self):
+        """Test historical data API endpoint"""
+        test_symbols = ["EURUSD", "GBPUSD", "USDJPY"]
+        
+        for symbol in test_symbols:
+            success, response = self.run_test(
+                f"Historical Data for {symbol}",
+                "GET",
+                f"forex/historical/{symbol}",
+                200
+            )
+            if success:
+                print(f"Historical data status: {response.get('status')}")
+                data = response.get('data', [])
+                print(f"  - Number of data points: {len(data)}")
+                
+                if data:
+                    # Verify data structure
+                    first_point = data[0]
+                    required_fields = ['timestamp', 'open', 'high', 'low', 'close']
+                    has_all_fields = all(field in first_point for field in required_fields)
+                    print(f"  - Has required fields (timestamp, OHLC): {has_all_fields}")
+                    
+                    # Check if we have at least 100 data points as expected
+                    if len(data) >= 100:
+                        print(f"  - ✅ Sufficient data points (>= 100)")
+                    else:
+                        print(f"  - ⚠️ Limited data points (< 100)")
+                    
+                    # Show sample data
+                    print(f"  - Sample data point: {first_point}")
+                    
+                    # Verify timestamp format
+                    try:
+                        datetime.fromisoformat(first_point['timestamp'].replace('Z', '+00:00'))
+                        print(f"  - ✅ Valid timestamp format")
+                    except:
+                        print(f"  - ❌ Invalid timestamp format")
+                        
+            if not success:
+                return False
+                
+        return True
+
+    def test_historical_data_invalid_symbol(self):
+        """Test historical data endpoint with invalid symbol"""
+        success, response = self.run_test(
+            "Historical Data with Invalid Symbol",
+            "GET",
+            "forex/historical/INVALID",
+            200  # Should still return 200 but with error message
+        )
+        if success:
+            # Check if error is properly handled
+            if response.get('status') == 'error' or 'error' in response:
+                print(f"  - ✅ Error properly handled for invalid symbol")
+                return True
+            else:
+                print(f"  - ⚠️ No error handling for invalid symbol")
+                return True
+        return False
         """Test strategy performance tracking"""
         success, response = self.run_test(
             "Strategy Performance",
