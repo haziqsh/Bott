@@ -303,6 +303,8 @@ class ForexAITradingAgentAPITester:
                 print(f"  - ⚠️ No error handling for invalid symbol")
                 return True
         return False
+        
+    def test_strategy_performance(self):
         """Test strategy performance tracking"""
         success, response = self.run_test(
             "Strategy Performance",
