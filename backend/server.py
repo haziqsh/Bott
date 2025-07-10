@@ -1903,6 +1903,27 @@ async def simulate_backtest(symbol: str, data: pd.DataFrame):
             'error': str(e)
         }
 
+@api_router.get("/forex/historical/{symbol}")
+async def get_historical_data(symbol: str):
+    """Get historical data for a specific forex pair"""
+    try:
+        data = trading_agent.get_forex_data(symbol, '1h', 1000)
+        if data.empty:
+            return {"status": "error", "message": "No data available"}
+        
+        # Convert data to list of dictionaries for JSON serialization
+        historical_data = data.reset_index().to_dict('records')
+        
+        return {
+            "status": "success",
+            "symbol": symbol,
+            "data": historical_data,
+            "total_points": len(historical_data),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @api_router.get("/forex/ai-insights/{symbol}")
 async def get_ai_insights(symbol: str):
     """Get comprehensive AI insights for a specific currency pair"""
