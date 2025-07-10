@@ -412,6 +412,10 @@ def main():
     root_success = tester.test_root_endpoint()
     pairs_success = tester.test_forex_pairs()
     
+    # Historical data tests
+    historical_success = tester.test_historical_data()
+    historical_invalid_success = tester.test_historical_data_invalid_symbol()
+    
     # Advanced signal generation tests
     advanced_signals_success = tester.test_advanced_signals()
     binary_signals_success = tester.test_binary_signals()
@@ -437,6 +441,7 @@ def main():
     print("\n📋 DETAILED RESULTS")
     print("===================")
     print(f"✓ Basic API functionality: {'✅ PASS' if root_success and pairs_success else '❌ FAIL'}")
+    print(f"✓ Historical data endpoint: {'✅ PASS' if historical_success and historical_invalid_success else '❌ FAIL'}")
     print(f"✓ Advanced signal generation: {'✅ PASS' if advanced_signals_success else '❌ FAIL'}")
     print(f"✓ Binary options capabilities: {'✅ PASS' if binary_signals_success else '❌ FAIL'}")
     print(f"✓ Market overview analytics: {'✅ PASS' if market_overview_success else '❌ FAIL'}")
