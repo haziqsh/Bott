@@ -94,6 +94,10 @@ class ForexTradingAgent:
         # Initialize news and sentiment service
         self.news_service = news_sentiment_service
         
+        # Initialize advanced strategy factory
+        print("📊 Initializing Advanced Strategy Factory...")
+        self.advanced_strategies = AdvancedStrategyFactory()
+        
         # Initialize advanced trading strategies
         # self.nostalgia_strategy = NostalgiaForInfinityStrategy()
         # self.ichimoku_strategy = IchimokuStrategy()
