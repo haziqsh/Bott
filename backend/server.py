@@ -89,14 +89,14 @@ class ForexTradingAgent:
         
         # Initialize advanced AI models
         print("🤖 Initializing Advanced AI Models...")
-        self.ai_models = AdvancedAIModels()
+        # self.ai_models = AdvancedAIModels()  # Temporarily disabled
         
         # Initialize news and sentiment service
-        self.news_service = news_sentiment_service
+        # self.news_service = news_sentiment_service  # Temporarily disabled
         
         # Initialize advanced strategy factory
         print("📊 Initializing Advanced Strategy Factory...")
-        self.advanced_strategies = AdvancedStrategyFactory()
+        # self.advanced_strategies = AdvancedStrategyFactory()  # Temporarily disabled
         
         # Initialize advanced trading strategies
         # self.nostalgia_strategy = NostalgiaForInfinityStrategy()
