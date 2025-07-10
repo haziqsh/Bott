@@ -1613,88 +1613,170 @@ async def backtest_strategies(request: ForexAnalysisRequest):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@api_router.get("/forex/market-overview")
-async def get_market_overview():
-    """Get comprehensive market overview with all analysis"""
+@api_router.get("/advanced-analysis/{symbol}")
+async def get_advanced_analysis(symbol: str):
+    """Get comprehensive advanced analysis for a symbol"""
     try:
-        symbols = trading_agent.major_pairs[:8]
-        market_overview = {
-            'total_pairs_analyzed': len(symbols),
-            'strong_buy_signals': 0,
-            'strong_sell_signals': 0,
-            'binary_opportunities': 0,
-            'market_sentiment': 'neutral',
-            'top_opportunities': [],
-            'risk_level': 'medium',
-            'pairs_analysis': []
-        }
+        # Get market data
+        data = trading_agent.get_forex_data(symbol)
+        if data.empty:
+            return {"error": "No data available"}
         
-        for symbol in symbols:
-            data = trading_agent.get_forex_data(symbol, '1h', 200)
-            if data.empty:
-                continue
-                
-            data = trading_agent.calculate_all_indicators(data)
-            
-            # Get all signals
-            signals = trading_agent.generate_advanced_signals(symbol, data)
-            binary_signals = trading_agent.generate_binary_signals(symbol, data)
-            sentiment = trading_agent.analyze_sentiment(symbol)
-            
-            # Count signal types
-            buy_signals = [s for s in signals if s['type'] == 'BUY']
-            sell_signals = [s for s in signals if s['type'] == 'SELL']
-            
-            if buy_signals:
-                market_overview['strong_buy_signals'] += len(buy_signals)
-            if sell_signals:
-                market_overview['strong_sell_signals'] += len(sell_signals)
-            if binary_signals:
-                market_overview['binary_opportunities'] += len(binary_signals)
-            
-            # Add to top opportunities if high-strength signals
-            high_strength_signals = [s for s in signals if s['strength'] >= 0.8]
-            if high_strength_signals:
-                market_overview['top_opportunities'].extend(high_strength_signals)
-                
-            # Pair analysis
-            latest = data.iloc[-1]
-            pair_analysis = {
-                'symbol': symbol,
-                'current_price': float(latest['Close']),
-                'change_percent': float((latest['Close'] - data.iloc[-2]['Close']) / data.iloc[-2]['Close'] * 100),
-                'signals_count': len(signals),
-                'binary_signals_count': len(binary_signals),
-                'sentiment': sentiment['sentiment'],
-                'trend': 'bullish' if buy_signals else 'bearish' if sell_signals else 'neutral',
-                'volatility': float(latest.get('ATR', 0)),
-                'rsi': float(latest.get('RSI', 50))
-            }
-            market_overview['pairs_analysis'].append(pair_analysis)
+        # Add technical indicators
+        data = trading_agent.calculate_all_indicators(data)
         
-        # Calculate overall market sentiment
-        total_signals = market_overview['strong_buy_signals'] + market_overview['strong_sell_signals']
-        if total_signals > 0:
-            buy_ratio = market_overview['strong_buy_signals'] / total_signals
-            if buy_ratio > 0.6:
-                market_overview['market_sentiment'] = 'bullish'
-            elif buy_ratio < 0.4:
-                market_overview['market_sentiment'] = 'bearish'
-                
-        # Sort top opportunities by strength
-        market_overview['top_opportunities'] = sorted(
-            market_overview['top_opportunities'], 
-            key=lambda x: x['strength'], 
-            reverse=True
-        )[:10]
+        # Get advanced strategy signals
+        advanced_signals = trading_agent.advanced_strategies.get_all_signals(data, symbol)
+        
+        # Get risk assessment
+        risk_assessment = trading_agent.advanced_strategies.get_risk_assessment(data, symbol)
+        
+        # Get AI insights
+        ai_insights = trading_agent.ai_models.get_ai_insights(symbol, data)
         
         return {
-            "status": "success",
-            "market_overview": market_overview,
+            "symbol": symbol,
+            "advanced_signals": advanced_signals,
+            "risk_assessment": risk_assessment,
+            "ai_insights": ai_insights,
+            "data_points": len(data),
             "timestamp": datetime.now().isoformat()
         }
+        
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"error": str(e)}
+
+@api_router.get("/volatility-analysis/{symbol}")
+async def get_volatility_analysis(symbol: str):
+    """Get detailed volatility analysis"""
+    try:
+        # Get market data
+        data = trading_agent.get_forex_data(symbol)
+        if data.empty:
+            return {"error": "No data available"}
+        
+        # Get volatility strategy
+        volatility_strategy = trading_agent.advanced_strategies.strategies['volatility']
+        
+        # Calculate returns
+        returns = data['Close'].pct_change().dropna()
+        
+        # Get GARCH analysis
+        garch_results = volatility_strategy.calculate_garch_volatility(returns)
+        
+        # Get Hurst exponent
+        hurst_results = volatility_strategy.calculate_hurst_exponent(data['Close'])
+        
+        # Get volatility signals
+        volatility_signals = volatility_strategy.generate_volatility_signals(data)
+        
+        return {
+            "symbol": symbol,
+            "garch_analysis": garch_results,
+            "hurst_analysis": hurst_results,
+            "volatility_signals": volatility_signals,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+@api_router.get("/correlation-analysis/{symbol}")
+async def get_correlation_analysis(symbol: str):
+    """Get multi-timeframe correlation analysis"""
+    try:
+        # Get market data
+        data = trading_agent.get_forex_data(symbol)
+        if data.empty:
+            return {"error": "No data available"}
+        
+        # Get correlation strategy
+        correlation_strategy = trading_agent.advanced_strategies.strategies['correlation']
+        
+        # Calculate multi-timeframe features
+        features = correlation_strategy.calculate_multi_timeframe_features(data)
+        
+        # Detect patterns
+        patterns = correlation_strategy.detect_cross_timeframe_patterns(features)
+        
+        # Get correlation signals
+        correlation_signals = correlation_strategy.generate_correlation_signals(data)
+        
+        return {
+            "symbol": symbol,
+            "timeframe_features": features.tail(10).to_dict('records') if not features.empty else [],
+            "detected_patterns": patterns,
+            "correlation_signals": correlation_signals,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+@api_router.get("/risk-analysis/{symbol}")
+async def get_risk_analysis(symbol: str):
+    """Get comprehensive Monte Carlo risk analysis"""
+    try:
+        # Get market data
+        data = trading_agent.get_forex_data(symbol)
+        if data.empty:
+            return {"error": "No data available"}
+        
+        # Get risk assessment
+        risk_assessment = trading_agent.advanced_strategies.get_risk_assessment(data, symbol)
+        
+        return {
+            "symbol": symbol,
+            "risk_assessment": risk_assessment,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+@api_router.get("/market-regime/{symbol}")
+async def get_market_regime(symbol: str):
+    """Get current market regime analysis"""
+    try:
+        # Get market data
+        data = trading_agent.get_forex_data(symbol)
+        if data.empty:
+            return {"error": "No data available"}
+        
+        # Add technical indicators
+        data = trading_agent.calculate_all_indicators(data)
+        
+        # Analyze market patterns
+        pattern_analysis = trading_agent.analyze_market_patterns(symbol, data)
+        
+        # Get volatility regime
+        volatility_strategy = trading_agent.advanced_strategies.strategies['volatility']
+        returns = data['Close'].pct_change().dropna()
+        garch_results = volatility_strategy.calculate_garch_volatility(returns)
+        
+        # Get Hurst exponent for trend behavior
+        hurst_results = volatility_strategy.calculate_hurst_exponent(data['Close'])
+        
+        # Combine regime analysis
+        regime_analysis = {
+            "market_patterns": pattern_analysis,
+            "volatility_regime": garch_results['volatility_regimes'] if garch_results else {},
+            "trend_behavior": hurst_results,
+            "regime_classification": {
+                "primary_regime": "trending" if hurst_results['hurst_exponent'] > 0.6 else "mean_reverting" if hurst_results['hurst_exponent'] < 0.4 else "random_walk",
+                "volatility_state": garch_results['volatility_regimes']['current_regime'] if garch_results else 0,
+                "confidence": hurst_results['confidence']
+            }
+        }
+        
+        return {
+            "symbol": symbol,
+            "regime_analysis": regime_analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
 
 async def simulate_backtest(symbol: str, data: pd.DataFrame):
     """Simulate backtesting for a trading strategy"""
