@@ -32,6 +32,7 @@ warnings.filterwarnings('ignore')
 # Import advanced AI models and services
 from .ai_models import AdvancedAIModels
 from .news_sentiment import news_sentiment_service
+from .advanced_strategies import AdvancedStrategyFactory
 
 # Import advanced trading strategies
 # from .trading_strategies import (
