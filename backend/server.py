@@ -516,8 +516,11 @@ class ForexTradingAgent:
                 
             signals = []
             
-            # Get AI insights first
-            ai_insights = self.get_ai_insights(symbol, data)
+            # Get AI insights first (temporarily disabled)
+            ai_insights = {
+                'ensemble': {'prediction': 'neutral'},
+                'sentiment': {'sentiment': 'neutral'}
+            }
             
             # Advanced NostalgiaForInfinity-inspired Strategy
             try:
