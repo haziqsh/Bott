@@ -1744,6 +1744,9 @@ async def simulate_backtest(symbol: str, data: pd.DataFrame):
             'symbol': symbol,
             'error': str(e)
         }
+
+@api_router.get("/forex/ai-insights/{symbol}")
+async def get_ai_insights(symbol: str):
     """Get comprehensive AI insights for a specific currency pair"""
     try:
         data = trading_agent.get_forex_data(symbol, '1h', 200)
