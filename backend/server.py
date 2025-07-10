@@ -86,6 +86,13 @@ class ForexTradingAgent:
         self.performance_metrics = {}
         self.strategy_accuracy = {}
         
+        # Initialize advanced AI models
+        print("🤖 Initializing Advanced AI Models...")
+        self.ai_models = AdvancedAIModels()
+        
+        # Initialize news and sentiment service
+        self.news_service = news_sentiment_service
+        
         # Initialize advanced trading strategies
         # self.nostalgia_strategy = NostalgiaForInfinityStrategy()
         # self.ichimoku_strategy = IchimokuStrategy()
@@ -103,6 +110,10 @@ class ForexTradingAgent:
             'binary': {'wins': 0, 'losses': 0, 'total_trades': 0},
             'quant': {'wins': 0, 'losses': 0, 'total_trades': 0}
         }
+        
+        # Market sentiment cache
+        self.sentiment_cache = {}
+        self.sentiment_last_updated = None
         
     def get_forex_data(self, symbol: str, timeframe: str = '1h', periods: int = 1000):
         """Get forex data from multiple sources"""
