@@ -86,7 +86,7 @@ hurst>=0.0.5
 # # quantlib-python>=1.18  # Temporarily commented out  # Temporarily commented out
 # Monte Carlo and Optimization
 # # pymc>=5.8.0  # Temporarily commented out  # Temporarily commented out
-# emcee>=3.1.0  # Temporarily commented out
+# # emcee>=3.1.0  # Temporarily commented out  # Temporarily commented out
 # Advanced Pattern Recognition
 stumpy>=1.12.0
 tsfresh>=0.20.0
