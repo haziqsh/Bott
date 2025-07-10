@@ -81,7 +81,7 @@ opencv-python>=4.8.0
 scikit-image>=0.22.0
 # Advanced Volatility and Risk Models
 hurst>=0.0.5
-# pykalman>=0.9.5  # Temporarily commented out
+# # pykalman>=0.9.5  # Temporarily commented out  # Temporarily commented out
 # Advanced Financial Models
 # quantlib-python>=1.18  # Temporarily commented out
 # Monte Carlo and Optimization
