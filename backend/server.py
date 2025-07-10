@@ -1232,6 +1232,40 @@ class ForexTradingAgent:
             print(f"Error analyzing sentiment for {symbol}: {e}")
             return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
             
+            # Analyze sentiment for each news item
+            sentiments = []
+            for news in sample_news:
+                result = sentiment_analyzer(news)
+                sentiments.append({
+                    'text': news,
+                    'sentiment': result[0]['label'],
+                    'confidence': result[0]['score']
+                })
+            
+            # Calculate overall sentiment
+            positive_count = sum(1 for s in sentiments if s['sentiment'] == 'POSITIVE')
+            negative_count = sum(1 for s in sentiments if s['sentiment'] == 'NEGATIVE')
+            
+            if positive_count > negative_count:
+                overall_sentiment = 'bullish'
+                confidence = positive_count / len(sentiments)
+            elif negative_count > positive_count:
+                overall_sentiment = 'bearish'
+                confidence = negative_count / len(sentiments)
+            else:
+                overall_sentiment = 'neutral'
+                confidence = 0.5
+            
+            return {
+                'sentiment': overall_sentiment,
+                'confidence': confidence,
+                'sources': sentiments
+            }
+            
+        except Exception as e:
+            print(f"Error analyzing sentiment for {symbol}: {e}")
+            return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
+            
             sentiments = []
             analyzed_sources = []
             
