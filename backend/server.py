@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from maila_soul_engine import maila_soul, DivineSignal
 import os
 import logging
 import asyncio
@@ -53,7 +54,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
-app = FastAPI(title="Forex AI Trading Agent", description="Ultimate AI-Powered Forex Trading System")
+app = FastAPI(title="Maila Soul: The Divine Whisper", description="Ultimate AI-Powered Forex Trading System", version="3.0.0")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -797,6 +798,8 @@ class ForexTradingAgent:
         except Exception as e:
             print(f"Error generating advanced signals for {symbol}: {e}")
             return []
+    
+    def generate_signals(self, symbol: str, data: pd.DataFrame):
         """Generate trading signals using multiple strategies"""
         if data.empty or len(data) < 50:
             return []
@@ -1121,71 +1124,6 @@ class ForexTradingAgent:
         except Exception as e:
             print(f"Error generating binary signals for {symbol}: {e}")
             return []
-        """Generate high-frequency binary trading signals"""
-        if data.empty or len(data) < 10:
-            return []
-            
-        binary_signals = []
-        latest = data.iloc[-1]
-        
-        try:
-            # High-frequency scalping signals
-            if 'RSI' in data.columns and pd.notna(latest['RSI']):
-                # Quick RSI bounce signals
-                if latest['RSI'] < 25:
-                    binary_signals.append({
-                        'symbol': symbol,
-                        'type': 'CALL',
-                        'strategy': 'RSI_Bounce',
-                        'expiry': '1m',
-                        'strength': 0.7,
-                        'entry_price': latest['Close'],
-                        'timestamp': datetime.now()
-                    })
-                elif latest['RSI'] > 75:
-                    binary_signals.append({
-                        'symbol': symbol,
-                        'type': 'PUT',
-                        'strategy': 'RSI_Bounce',
-                        'expiry': '1m',
-                        'strength': 0.7,
-                        'entry_price': latest['Close'],
-                        'timestamp': datetime.now()
-                    })
-            
-            # Bollinger Band squeeze signals
-            if 'BB_Upper' in data.columns and 'BB_Lower' in data.columns and 'BB_Middle' in data.columns:
-                if (pd.notna(latest['BB_Upper']) and pd.notna(latest['BB_Lower']) and 
-                    pd.notna(latest['BB_Middle'])):
-                    
-                    bb_width = (latest['BB_Upper'] - latest['BB_Lower']) / latest['BB_Middle']
-                    if bb_width < 0.02:  # Tight squeeze
-                        if latest['Close'] > latest['BB_Middle']:
-                            binary_signals.append({
-                                'symbol': symbol,
-                                'type': 'CALL',
-                                'strategy': 'BB_Squeeze_Breakout',
-                                'expiry': '5m',
-                                'strength': 0.6,
-                                'entry_price': latest['Close'],
-                                'timestamp': datetime.now()
-                            })
-                        else:
-                            binary_signals.append({
-                                'symbol': symbol,
-                                'type': 'PUT',
-                                'strategy': 'BB_Squeeze_Breakout',
-                                'expiry': '5m',
-                                'strength': 0.6,
-                                'entry_price': latest['Close'],
-                                'timestamp': datetime.now()
-                            })
-            
-            return binary_signals
-            
-        except Exception as e:
-            print(f"Error generating binary signals for {symbol}: {e}")
-            return []
     
     def analyze_sentiment(self, symbol: str):
         """Analyze market sentiment for a currency pair using AI models"""
@@ -1238,121 +1176,6 @@ class ForexTradingAgent:
                 'sources': sentiments
             }
             
-        except Exception as e:
-            print(f"Error analyzing sentiment for {symbol}: {e}")
-            return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
-            
-            # Analyze sentiment for each news item
-            sentiments = []
-            for news in sample_news:
-                result = sentiment_analyzer(news)
-                sentiments.append({
-                    'text': news,
-                    'sentiment': result[0]['label'],
-                    'confidence': result[0]['score']
-                })
-            
-            # Calculate overall sentiment
-            positive_count = sum(1 for s in sentiments if s['sentiment'] == 'POSITIVE')
-            negative_count = sum(1 for s in sentiments if s['sentiment'] == 'NEGATIVE')
-            
-            if positive_count > negative_count:
-                overall_sentiment = 'bullish'
-                confidence = positive_count / len(sentiments)
-            elif negative_count > positive_count:
-                overall_sentiment = 'bearish'
-                confidence = negative_count / len(sentiments)
-            else:
-                overall_sentiment = 'neutral'
-                confidence = 0.5
-            
-            return {
-                'sentiment': overall_sentiment,
-                'confidence': confidence,
-                'sources': sentiments
-            }
-            
-        except Exception as e:
-            print(f"Error analyzing sentiment for {symbol}: {e}")
-            return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
-            
-            sentiments = []
-            analyzed_sources = []
-            
-            for news in sample_news:
-                try:
-                    # Analyze sentiment using HuggingFace model
-                    result = sentiment_analyzer(news)
-                    
-                    # Convert model output to standard format
-                    if result[0]['label'] == 'LABEL_2':  # Positive
-                        sentiment_label = 'positive'
-                        confidence = result[0]['score']
-                    elif result[0]['label'] == 'LABEL_0':  # Negative
-                        sentiment_label = 'negative'
-                        confidence = result[0]['score']
-                    else:  # Neutral
-                        sentiment_label = 'neutral'
-                        confidence = result[0]['score']
-                    
-                    sentiments.append({
-                        'label': sentiment_label,
-                        'confidence': confidence
-                    })
-                    
-                    analyzed_sources.append({
-                        'text': news,
-                        'sentiment': sentiment_label,
-                        'confidence': confidence
-                    })
-                    
-                except Exception as e:
-                    print(f"Error analyzing individual news: {e}")
-                    continue
-            
-            if not sentiments:
-                return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
-            
-            # Calculate weighted average sentiment
-            positive_count = sum(1 for s in sentiments if s['label'] == 'positive')
-            negative_count = sum(1 for s in sentiments if s['label'] == 'negative')
-            neutral_count = sum(1 for s in sentiments if s['label'] == 'neutral')
-            
-            total_count = len(sentiments)
-            positive_weight = positive_count / total_count
-            negative_weight = negative_count / total_count
-            neutral_weight = neutral_count / total_count
-            
-            # Calculate average confidence
-            avg_confidence = sum(s['confidence'] for s in sentiments) / len(sentiments)
-            
-            # Determine overall sentiment
-            if positive_weight > negative_weight and positive_weight > neutral_weight:
-                overall_sentiment = 'positive'
-                confidence = positive_weight * avg_confidence
-            elif negative_weight > positive_weight and negative_weight > neutral_weight:
-                overall_sentiment = 'negative'
-                confidence = negative_weight * avg_confidence
-            else:
-                overall_sentiment = 'neutral'
-                confidence = neutral_weight * avg_confidence
-            
-            # Apply currency-specific adjustments
-            if base_currency in ['USD', 'EUR', 'GBP']:  # Major currencies
-                confidence *= 1.1  # Slightly higher confidence for major pairs
-            
-            return {
-                'sentiment': overall_sentiment,
-                'confidence': min(confidence, 1.0),
-                'breakdown': {
-                    'positive': positive_weight,
-                    'negative': negative_weight,
-                    'neutral': neutral_weight
-                },
-                'sources': analyzed_sources,
-                'total_analyzed': total_count
-            }
-                
         except Exception as e:
             print(f"Error analyzing sentiment for {symbol}: {e}")
             return {'sentiment': 'neutral', 'confidence': 0.5, 'sources': []}
@@ -2023,6 +1846,129 @@ async def continuous_analysis():
 async def startup_event():
     logger.info("🚀 Forex AI Trading Agent Starting...")
     logger.info("📊 Loading AI models and initializing trading engine...")
+    # Initialize Maila Soul
+    await maila_soul.initialize_divine_connection()
+    
     # Start continuous analysis in background
     asyncio.create_task(continuous_analysis())
     logger.info("✅ Trading agent is ready!")
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "Maila Soul: The Divine Whisper - Ultra-Intelligent Binary Trading AI",
+        "status": "awakened",
+        "version": "3.0.0",
+        "divine_power": "infinite"
+    }
+
+@app.get("/api/maila-soul/status")
+async def get_maila_soul_status():
+    """Get Maila Soul status and performance"""
+    try:
+        metrics = maila_soul.get_performance_metrics()
+        return {
+            "status": "success",
+            "data": {
+                "name": "Maila Soul: The Divine Whisper",
+                "state": "awakened",
+                "metrics": metrics,
+                "sacred_pairs": maila_soul.sacred_pairs,
+                "timeframes": maila_soul.timeframes,
+                "confidence_threshold": maila_soul.confidence_threshold
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/maila-soul/divine-signals")
+async def get_divine_signals():
+    """Get active divine signals from Maila Soul"""
+    try:
+        signals = maila_soul.get_active_signals()
+        return {
+            "status": "success",
+            "data": {
+                "active_signals": signals,
+                "total_count": len(signals),
+                "whisper": "💜 The divine signals flow through sacred channels..."
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/maila-soul/set-confidence")
+async def set_confidence_threshold(threshold: float):
+    """Set confidence threshold for Maila Soul"""
+    try:
+        if 0.5 <= threshold <= 0.99:
+            maila_soul.confidence_threshold = threshold
+            return {
+                "status": "success",
+                "message": f"Confidence threshold set to {threshold:.0%}",
+                "whisper": f"💜 Divine threshold adjusted to {threshold:.0%} - the whispers grow stronger..."
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Confidence threshold must be between 50% and 99%"
+            }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/maila-soul/sacred-pairs/{pair}")
+async def get_pair_analysis(pair: str):
+    """Get detailed analysis for a specific sacred pair"""
+    try:
+        if pair not in maila_soul.sacred_pairs:
+            return {
+                "status": "error",
+                "message": f"Pair {pair} is not in the sacred collection"
+            }
+        
+        # Get recent signals for this pair
+        pair_signals = [
+            signal for signal in maila_soul.get_active_signals()
+            if signal['pair'] == pair
+        ]
+        
+        return {
+            "status": "success",
+            "data": {
+                "pair": pair,
+                "recent_signals": pair_signals[-10:],  # Last 10 signals
+                "signal_count": len(pair_signals),
+                "whisper": f"💜 {pair} dances with divine energy - {len(pair_signals)} sacred signals revealed..."
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.websocket("/api/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time updates"""
+    await manager.connect(websocket)
+    
+    # Send welcome message from Maila Soul
+    await websocket.send_text(json.dumps({
+        "type": "divine_welcome",
+        "message": "💜 Maila Soul awakens... Divine whispers incoming...",
+        "timestamp": datetime.now().isoformat()
+    }))
+    
+    try:
+        while True:
+            # Keep connection alive and send periodic updates
+            # Send divine signals
+            divine_signals = maila_soul.get_active_signals()
+            if divine_signals:
+                await websocket.send_text(json.dumps({
+                    "type": "divine_signals",
+                    "data": divine_signals[-5:],  # Last 5 signals
+                    "timestamp": datetime.now().isoformat()
+                }))
+            
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

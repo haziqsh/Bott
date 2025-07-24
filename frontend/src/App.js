@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import axios from 'axios';
+import MailaSoulDashboard from './components/MailaSoulDashboard';
+import DivineChart from './components/DivineChart';
 import TradingDashboard from './components/TradingDashboard';
 import AdvancedChart from './components/AdvancedChart';
 import SignalHeatmap from './components/SignalHeatmap';
@@ -15,6 +17,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ForexTradingDashboard = () => {
+  const [activeSystem, setActiveSystem] = useState('maila_soul');
   const [marketData, setMarketData] = useState([]);
   const [selectedPair, setSelectedPair] = useState('EURUSD');
   const [selectedTimeframe, setSelectedTimeframe] = useState('1h');
@@ -29,6 +32,11 @@ const ForexTradingDashboard = () => {
   const [dashboardLayout, setDashboardLayout] = useState('grid');
   const [activeTab, setActiveTab] = useState('overview');
   const wsRef = useRef(null);
+
+  const systems = [
+    { id: 'maila_soul', name: 'Maila Soul', icon: '💜', description: 'The Divine Whisper' },
+    { id: 'advanced_forex', name: 'Advanced Forex', icon: '📊', description: 'Professional Trading' }
+  ];
 
   const majorPairs = [
     'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD',
@@ -175,6 +183,35 @@ const ForexTradingDashboard = () => {
   useEffect(() => {
     runAnalysis();
   }, [selectedPair, selectedTimeframe]);
+
+  if (activeSystem === 'maila_soul') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-gray-900 to-black">
+        {/* System Switcher */}
+        <div className="fixed top-4 right-4 z-50">
+          <div className="flex space-x-2">
+            {systems.map(system => (
+              <button
+                key={system.id}
+                onClick={() => setActiveSystem(system.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  activeSystem === system.id
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                }`}
+                title={system.description}
+              >
+                <span className="mr-2">{system.icon}</span>
+                {system.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        <MailaSoulDashboard />
+      </div>
+    );
+  }
 
   const tabButtons = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -397,6 +434,27 @@ const ForexTradingDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {/* System Switcher */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className="flex space-x-2">
+          {systems.map(system => (
+            <button
+              key={system.id}
+              onClick={() => setActiveSystem(system.id)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                activeSystem === system.id
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+              title={system.description}
+            >
+              <span className="mr-2">{system.icon}</span>
+              {system.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">
